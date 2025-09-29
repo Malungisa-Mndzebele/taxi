@@ -390,6 +390,32 @@ router.get('/history', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/rides/available
+// @desc    Get available rides for drivers
+// @access  Private (Driver)
+router.get('/available', [
+  auth,
+  requireRole(['driver'])
+], async (req, res) => {
+  try {
+    // Check if driver is online
+    if (!req.user.driverProfile.isOnline) {
+      return res.status(400).json({ message: 'Driver must be online to view available rides' });
+    }
+
+    // Find rides that are requested and don't have a driver assigned
+    const rides = await Ride.find({
+      status: 'requested',
+      driver: null
+    }).populate('passenger', 'firstName lastName phone profilePicture');
+
+    res.json({ rides });
+  } catch (error) {
+    console.error('Get available rides error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/rides/:id
 // @desc    Get ride details
 // @access  Private

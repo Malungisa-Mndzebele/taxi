@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
-require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/.env' });
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -16,15 +16,18 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: true,
     methods: ["GET", "POST"]
   }
 });
 
+// Attach Socket.io to app for use in routes
+app.set('io', io);
+
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  origin: true,
   credentials: true
 }));
 
