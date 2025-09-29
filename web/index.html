@@ -45,39 +45,45 @@
         }
         .success { background: #d4edda; color: #155724; }
         .error { background: #f8d7da; color: #721c24; }
+        .ride-card {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .btn-primary { background: #007bff; }
+        .btn-primary:hover { background: #0056b3; }
     </style>
 </head>
 <body>
     <h1>🚗 Taxi App - Web Version</h1>
     
-    <div class="card">
-        <h2>🔐 Authentication</h2>
-        <input type="text" id="firstName" placeholder="First Name">
-        <input type="text" id="lastName" placeholder="Last Name">
-        <input type="email" id="email" placeholder="Email">
-        <input type="tel" id="phone" placeholder="Phone">
-        <input type="password" id="password" placeholder="Password">
-        <select id="role">
-            <option value="passenger">Passenger</option>
-            <option value="driver">Driver</option>
-        </select>
-        <button class="btn" onclick="register()">Register</button>
-        <button class="btn" onclick="login()">Login</button>
-        <div id="auth-status"></div>
-    </div>
-    
-    <div class="card">
-        <h2>🚖 Request Ride</h2>
-        <input type="text" id="pickupLocation" placeholder="Pickup Location">
-        <input type="text" id="dropoffLocation" placeholder="Dropoff Location">
-        <button class="btn" onclick="requestRide()">Request Ride</button>
-        <div id="ride-status"></div>
-    </div>
-    
-    <div class="card">
-        <h2>🔧 API Status</h2>
-        <button class="btn" onclick="checkHealth()">Check Backend</button>
-        <div id="api-status"></div>
+    <!-- Auth Forms (shown initially) -->
+    <div id="auth-forms">
+        <div class="card">
+            <h2>🔐 Authentication</h2>
+            <input type="text" id="firstName" placeholder="First Name">
+            <input type="text" id="lastName" placeholder="Last Name">
+            <input type="email" id="email" placeholder="Email">
+            <input type="tel" id="phone" placeholder="Phone">
+            <input type="password" id="password" placeholder="Password">
+            <select id="role">
+                <option value="passenger">Passenger</option>
+                <option value="driver">Driver</option>
+            </select>
+            <button class="btn" onclick="register()">Register</button>
+            <button class="btn" onclick="login()">Login</button>
+            <div id="auth-status"></div>
+        </div>
+        
+        <div class="card">
+            <h2>🔧 API Status</h2>
+            <button class="btn" onclick="checkHealth()">Check Backend</button>
+            <div id="api-status"></div>
+        </div>
     </div>
 
     <!-- User Interface (shown after login) -->
@@ -121,6 +127,7 @@
     <script>
         const API_BASE = 'http://localhost:5000/api';
         let authToken = localStorage.getItem('authToken');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
         async function checkHealth() {
             try {
@@ -348,10 +355,11 @@
                         ? data.rides.map(ride => `
                             <div class="ride-card">
                                 <h4>Ride Request</h4>
-                                <p><strong>From:</strong> ${ride.pickupLocation.address}</p>
-                                <p><strong>To:</strong> ${ride.dropoffLocation.address}</p>
-                                <p><strong>Fare:</strong> $${ride.fare.totalFare}</p>
+                                <p><strong>From:</strong> ${ride.pickupLocation?.address || 'Pickup Location'}</p>
+                                <p><strong>To:</strong> ${ride.dropoffLocation?.address || 'Dropoff Location'}</p>
+                                <p><strong>Fare:</strong> $${ride.fare?.totalFare || 'TBD'}</p>
                                 <p><strong>Status:</strong> ${ride.status}</p>
+                                <p><strong>Passenger:</strong> ${ride.passenger?.firstName} ${ride.passenger?.lastName}</p>
                                 <button onclick="acceptRide('${ride._id}')" class="btn btn-primary">Accept Ride</button>
                             </div>
                         `).join('')
@@ -394,8 +402,47 @@
             }
         }
 
-        // Check backend health on page load
-        window.onload = checkHealth;
+        async function getActiveRides() {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/rides/active`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const ridesHtml = data.rides.length > 0 
+                        ? data.rides.map(ride => `
+                            <div class="ride-card">
+                                <h4>Active Ride</h4>
+                                <p><strong>From:</strong> ${ride.pickupLocation?.address || 'Pickup Location'}</p>
+                                <p><strong>To:</strong> ${ride.dropoffLocation?.address || 'Dropoff Location'}</p>
+                                <p><strong>Status:</strong> ${ride.status}</p>
+                                <p><strong>Driver:</strong> ${ride.driver ? ride.driver.firstName + ' ' + ride.driver.lastName : 'Not assigned'}</p>
+                            </div>
+                        `).join('')
+                        : '<p>No active rides.</p>';
+                    
+                    document.getElementById('active-rides').innerHTML = ridesHtml;
+                } else {
+                    document.getElementById('active-rides').innerHTML = 
+                        `<div class="status error">❌ Failed to load active rides: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('active-rides').innerHTML = 
+                    `<div class="status error">❌ Error loading active rides: ${error.message}</div>`;
+            }
+        }
+
+        // Check backend health on page load and show interface if already logged in
+        window.onload = () => {
+            checkHealth();
+            if (authToken && currentUser) {
+                showUserInterface(currentUser);
+            }
+        };
     </script>
 </body>
 </html>

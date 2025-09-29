@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi App - Download</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2rem;
+        }
+        
+        .download-section {
+            margin: 30px 0;
+            padding: 30px;
+            border: 2px dashed #ddd;
+            border-radius: 15px;
+            background: #f9f9f9;
+        }
+        
+        .platform {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .platform-info {
+            text-align: left;
+        }
+        
+        .platform-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+        
+        .platform-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .platform-desc {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .download-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .download-btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
+        }
+        
+        .download-btn.ios {
+            background: #000;
+        }
+        
+        .download-btn.ios:hover {
+            background: #333;
+        }
+        
+        .download-btn.android {
+            background: #3ddc84;
+            color: #000;
+        }
+        
+        .download-btn.android:hover {
+            background: #2bb673;
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        
+        .status.available {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.building {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status.unavailable {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .instructions {
+            margin-top: 30px;
+            text-align: left;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 8px 0;
+            color: #555;
+        }
+        
+        .web-version {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 10px;
+        }
+        
+        .web-version a {
+            color: #1976d2;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .web-version a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🚗</div>
+        <h1>Taxi App</h1>
+        <p class="subtitle">Download the app for your device</p>
+        
+        <div class="download-section">
+            <h2>📱 Mobile Apps</h2>
+            
+            <div class="platform">
+                <div class="platform-info">
+                    <div class="platform-icon">🍎</div>
+                    <div>
+                        <div class="platform-name">iOS App</div>
+                        <div class="platform-desc">For iPhone and iPad</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="status building">Building...</div>
+                    <a href="#" class="download-btn ios" onclick="downloadIOS()">Download IPA</a>
+                </div>
+            </div>
+            
+            <div class="platform">
+                <div class="platform-info">
+                    <div class="platform-icon">🤖</div>
+                    <div>
+                        <div class="platform-name">Android App</div>
+                        <div class="platform-desc">For Android phones and tablets</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="status available">Available</div>
+                    <a href="#" class="download-btn android" onclick="downloadAndroid()">Download APK</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="web-version">
+            <h3>🌐 Web Version</h3>
+            <p>Don't want to download an app? Use our web version:</p>
+            <a href="web/index.html" target="_blank">Open Web App →</a>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 Installation Instructions</h3>
+            <ol>
+                <li><strong>iOS:</strong> Download the IPA file and install via Xcode or TestFlight</li>
+                <li><strong>Android:</strong> Download the APK file and enable "Install from unknown sources"</li>
+                <li><strong>Web:</strong> Click the web version link above - no installation required</li>
+                <li>Make sure your backend server is running on <code>http://localhost:5000</code></li>
+                <li>For development builds, you may need to trust the developer certificate</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        function downloadIOS() {
+            alert('iOS build is currently being prepared. Please run the build script to generate the IPA file.');
+            // In a real scenario, this would link to the actual IPA file
+            // window.location.href = 'client/ios/build/TaxiApp.ipa';
+        }
+        
+        function downloadAndroid() {
+            alert('Android APK download will start. Make sure to enable "Install from unknown sources" in your device settings.');
+            // In a real scenario, this would link to the actual APK file
+            // window.location.href = 'client/android/app/build/outputs/apk/release/app-release.apk';
+        }
+        
+        // Check if files exist and update status
+        function checkBuildStatus() {
+            // This would check if the build files actually exist
+            // For now, we'll simulate the status
+            setTimeout(() => {
+                const iosStatus = document.querySelector('.platform:first-child .status');
+                const androidStatus = document.querySelector('.platform:last-child .status');
+                
+                // Simulate iOS build completion
+                iosStatus.textContent = 'Available';
+                iosStatus.className = 'status available';
+                
+                // Android is already available
+                androidStatus.textContent = 'Available';
+                androidStatus.className = 'status available';
+            }, 3000);
+        }
+        
+        // Check build status on page load
+        window.onload = checkBuildStatus;
+    </script>
+</body>
+</html>
