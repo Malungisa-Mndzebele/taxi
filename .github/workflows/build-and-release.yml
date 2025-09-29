@@ -1,0 +1,130 @@
+name: Build and Release Apps
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '11'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+      
+    - name: Install dependencies
+      run: |
+        cd client
+        npm install
+        
+    - name: Build Android APK
+      run: |
+        cd client/android
+        ./gradlew assembleRelease
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: android-apk
+        path: client/android/app/build/outputs/apk/release/app-release.apk
+
+  build-ios:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        cd client
+        npm install
+        
+    - name: Install CocoaPods
+      run: |
+        cd client/ios
+        pod install
+        
+    - name: Build iOS App
+      run: |
+        cd client
+        npx react-native run-ios --configuration Release
+        
+    - name: Create IPA
+      run: |
+        cd client/ios
+        xcodebuild -workspace TaxiApp.xcworkspace -scheme TaxiApp -configuration Release -archivePath TaxiApp.xcarchive archive
+        xcodebuild -exportArchive -archivePath TaxiApp.xcarchive -exportPath ./build -exportOptionsPlist ExportOptions.plist
+        
+    - name: Upload IPA artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ios-ipa
+        path: client/ios/build/TaxiApp.ipa
+
+  create-release:
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Download Android APK
+      uses: actions/download-artifact@v3
+      with:
+        name: android-apk
+        path: ./releases
+        
+    - name: Download iOS IPA
+      uses: actions/download-artifact@v3
+      with:
+        name: ios-ipa
+        path: ./releases
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ./releases/app-release.apk
+          ./releases/TaxiApp.ipa
+        body: |
+          ## 🚗 Taxi App Release
+          
+          ### Downloads:
+          - **Android APK**: Download and install on Android devices
+          - **iOS IPA**: Download and install on iOS devices (requires developer trust)
+          
+          ### Installation:
+          1. Download the appropriate file for your device
+          2. Install following the instructions in the README
+          3. Make sure the backend server is running on your computer
+          4. Open the app and start using it!
+          
+          ### Web Version:
+          Available at: https://malungisa-mndzebele.github.io/taxi/web/
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

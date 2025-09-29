@@ -1,4 +1,37 @@
-<!DOCTYPE html>
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+console.log('🚗 Creating Simple Download System...\n');
+
+// Colors for console output
+const colors = {
+    reset: '\x1b[0m',
+    bright: '\x1b[1m',
+    red: '\x1b[31m',
+    green: '\x1b[32m',
+    yellow: '\x1b[33m',
+    blue: '\x1b[34m',
+    magenta: '\x1b[35m',
+    cyan: '\x1b[36m'
+};
+
+function log(message, color = 'reset') {
+    console.log(`${colors[color]}${message}${colors.reset}`);
+}
+
+function createReleasesDirectory() {
+    const releaseDir = 'releases';
+    if (!fs.existsSync(releaseDir)) {
+        fs.mkdirSync(releaseDir);
+        log(`📁 Created releases directory`, 'green');
+    }
+    return releaseDir;
+}
+
+function createDownloadPage() {
+    const downloadPage = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -335,20 +368,20 @@
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             if (isMobile) {
                 const mainOption = document.querySelector('.main-option');
-                mainOption.innerHTML = `
+                mainOption.innerHTML = \`
                     <h2>📱 Mobile Web App</h2>
                     <p>Perfect for mobile devices - works like a native app!</p>
                     <a href="web/index.html" class="download-btn web" target="_blank">🚀 Open Mobile App</a>
                     <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">
                         💡 Tip: Add to home screen for the best experience
                     </p>
-                `;
+                \`;
             }
         }
         
         // Track usage
         function trackUsage(action) {
-            console.log(`User action: ${action}`);
+            console.log(\`User action: \${action}\`);
             // You can add analytics tracking here
         }
         
@@ -363,4 +396,172 @@
         window.onload = detectMobile;
     </script>
 </body>
-</html>
+</html>`;
+    
+    fs.writeFileSync('download.html', downloadPage);
+    log('✅ Created enhanced download page: download.html', 'green');
+}
+
+function createSimpleInstructions() {
+    const instructions = `# 🚗 Taxi App - Simple Setup Guide
+
+## For Users (Super Easy!)
+
+### Option 1: Web App (Recommended)
+1. **Start the server**: Run \`npm start\` in your terminal
+2. **Open the app**: Go to \`download.html\` in your browser
+3. **Click "Open Web App"**: No installation needed!
+4. **Register & Login**: Create your account
+5. **Start using**: Request rides or accept them as a driver
+
+### Option 2: Direct Web Access
+- **URL**: \`web/index.html\`
+- **Works on**: Any device with a browser
+- **Mobile**: Add to home screen for app-like experience
+
+## Features Available
+- ✅ User registration and login
+- ✅ Ride requests with pickup/dropoff locations
+- ✅ Driver dashboard to accept rides
+- ✅ Real-time ride tracking
+- ✅ Rating system
+- ✅ Cross-platform (works on all devices)
+
+## No Installation Required!
+The web version provides the full app experience without any downloads or installations. It works on:
+- 📱 Mobile phones (Android & iOS)
+- 💻 Desktop computers
+- 📟 Tablets
+- 🌐 Any device with a web browser
+
+## Perfect User Experience
+1. Visit your repository
+2. Read the README
+3. Click the web app link
+4. Start using immediately!
+
+## For Developers
+- **Backend**: Node.js/Express server
+- **Frontend**: HTML/JavaScript web interface
+- **Database**: MongoDB
+- **Real-time**: Socket.io for live updates
+- **Authentication**: JWT tokens
+
+## Support
+- **Web App**: Always available, no setup needed
+- **Mobile Apps**: Coming soon (Android APK & iOS IPA)
+- **Documentation**: Check README.md for detailed setup
+
+Enjoy your ride! 🚗✨`;
+
+    fs.writeFileSync('SIMPLE_SETUP.md', instructions);
+    log('✅ Created simple setup guide: SIMPLE_SETUP.md', 'green');
+}
+
+function createReleasesReadme() {
+    const releasesReadme = `# 🚗 Taxi App - Release Files
+
+## Current Release: v1.0.0
+
+### Available Downloads
+
+#### 🌐 Web App (Ready Now!)
+- **File**: \`web/index.html\`
+- **Access**: Open in any web browser
+- **Installation**: No installation required
+- **Platforms**: All devices with browsers
+
+#### 📱 Mobile Apps (Coming Soon)
+- **Android APK**: \`app-release.apk\` (In development)
+- **iOS IPA**: \`TaxiApp.ipa\` (In development)
+
+## Quick Start
+
+1. **Start Backend Server**:
+   \`\`\`bash
+   npm start
+   \`\`\`
+
+2. **Open Web App**:
+   - Go to \`download.html\` in your browser
+   - Click "Open Web App"
+   - Register and start using!
+
+## Features
+
+- ✅ User registration and authentication
+- ✅ Real-time ride requests and acceptance
+- ✅ Driver and passenger dashboards
+- ✅ Live ride tracking
+- ✅ Cross-platform web interface
+- ✅ Real-time communication
+
+## Installation Instructions
+
+### Web App
+1. No installation required
+2. Works in any modern web browser
+3. For mobile: Add to home screen for app-like experience
+
+### Mobile Apps (When Available)
+1. Download the appropriate file for your device
+2. Follow platform-specific installation instructions
+3. Trust developer certificate if required
+
+## Support
+
+- **Documentation**: Check README.md
+- **Issues**: Create an issue in the repository
+- **Web Version**: Always available as fallback
+
+## Release Notes
+
+### v1.0.0
+- Initial release with web interface
+- Full ride-sharing functionality
+- Real-time communication
+- Cross-platform compatibility
+- Mobile-optimized web interface
+
+Enjoy your ride! 🚗✨`;
+
+    fs.writeFileSync('releases/README.md', releasesReadme);
+    log('✅ Created releases README: releases/README.md', 'green');
+}
+
+function main() {
+    log('🚗 Creating Simple Download System', 'bright');
+    log('==================================', 'bright');
+    
+    // Create releases directory
+    createReleasesDirectory();
+    
+    // Create download page
+    createDownloadPage();
+    
+    // Create simple instructions
+    createSimpleInstructions();
+    
+    // Create releases readme
+    createReleasesReadme();
+    
+    log('\n🎉 Simple download system created successfully!', 'green');
+    log('📁 Files created:', 'cyan');
+    log('   • Download Page: download.html', 'cyan');
+    log('   • Setup Guide: SIMPLE_SETUP.md', 'cyan');
+    log('   • Releases README: releases/README.md', 'cyan');
+    log('\n📤 Next steps:', 'yellow');
+    log('   1. Open download.html in your browser to test', 'yellow');
+    log('   2. Update README.md with the web app link', 'yellow');
+    log('   3. Share the download.html link with users', 'yellow');
+    log('\n🌐 Perfect user experience:', 'green');
+    log('   • Users visit your repository', 'green');
+    log('   • Click the web app link', 'green');
+    log('   • Start using immediately - no installation!', 'green');
+}
+
+if (require.main === module) {
+    main();
+}
+
+module.exports = { createDownloadPage, createSimpleInstructions, createReleasesReadme };

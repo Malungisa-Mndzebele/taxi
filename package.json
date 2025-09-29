@@ -16,7 +16,11 @@
     "build-android": "node build-apps.js --android",
     "build-ios": "node build-apps.js --ios",
     "build-all": "node build-apps.js --all",
-    "download": "open download.html"
+    "download": "open download.html",
+    "prepare-release": "node prepare-release.js --all",
+    "release": "npm run prepare-release && echo 'Release files ready in releases/ directory'",
+    "build-simple": "node build-simple.js",
+    "create-download": "node create-simple-download.js"
   },
   "keywords": [
     "ride-sharing",
