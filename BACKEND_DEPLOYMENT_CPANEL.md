@@ -1,27 +1,25 @@
 # Production Environment Variables for cPanel
+# ✅ CONFIGURED FOR: khasinogaming.com
 # Copy this to .env after uploading to server
 
 # Server Configuration
 PORT=5000
 NODE_ENV=production
 
-# Database Configuration
-# Replace with your actual cPanel database details
-MONGODB_URI=mongodb://localhost:27017/taxi-app
-# OR if using MySQL (recommended for cPanel):
-# DB_HOST=localhost
-# DB_NAME=username_taxi_app
-# DB_USER=username_taxi_user
-# DB_PASS=your_database_password
+# Database Configuration - ✅ YOUR ACTUAL CREDENTIALS
+DB_HOST=localhost
+DB_NAME=mawdqtvped_taxi_app
+DB_USER=mawdqtvped_username_taxi_app
+DB_PASS=@QWERTYasd
 
-# Security
-# IMPORTANT: Generate a secure random string!
+# Security - ⚠️ CRITICAL: CHANGE THIS!
+# Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 JWT_SECRET=CHANGE_THIS_TO_SECURE_RANDOM_STRING_123456789
 
 # CORS
 CLIENT_URL=https://khasinogaming.com/app
 
-# Optional: API Keys
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-STRIPE_SECRET_KEY=your_stripe_secret_key
+# Optional: API Keys (add if needed)
+GOOGLE_MAPS_API_KEY=
+STRIPE_SECRET_KEY=
 

@@ -24,35 +24,43 @@ Your cPanel hosting at **khasinogaming.com** includes:
    - Or: https://server28.shared.spaceship.host:2083
    - Login with your hosting credentials
 
-2. **Create Database:**
+2. **✅ Database Already Created!**
+   
+   Your database is already set up:
+   ```
+   Database Name: mawdqtvped_taxi_app
+   Database User: mawdqtvped_username_taxi_app
+   Database Password: @QWERTYasd
+   Database Host: localhost
+   ```
+   
+   ✅ **Skip to Step 2** (Upload Backend Files)
+   
+   ---
+   
+   <details>
+   <summary>📝 For reference: How to create database manually</summary>
+   
    - Navigate to: **Databases** → **MySQL® Databases**
    - Under **Create New Database:**
      - Database Name: `taxi_app`
      - Click **Create Database**
-   - Full name will be: `username_taxi_app` (with prefix)
+   - Full name will be: `mawdqtvped_taxi_app`
 
-3. **Create Database User:**
    - Under **MySQL Users** → **Add New User:**
-     - Username: `taxi_user`
-     - Password: Generate strong password (save it!)
+     - Username: `username_taxi_app`
+     - Password: Generate strong password
      - Click **Create User**
-   - Full name will be: `username_taxi_user`
+   - Full name will be: `mawdqtvped_username_taxi_app`
 
-4. **Add User to Database:**
    - Under **Add User To Database:**
-     - User: `username_taxi_user`
-     - Database: `username_taxi_app`
+     - User: `mawdqtvped_username_taxi_app`
+     - Database: `mawdqtvped_taxi_app`
      - Click **Add**
-   - On the next page, select **ALL PRIVILEGES**
+   - Select **ALL PRIVILEGES**
    - Click **Make Changes**
-
-5. **Save Database Credentials:**
-   ```
-   DB_HOST: localhost
-   DB_NAME: username_taxi_app
-   DB_USER: username_taxi_user
-   DB_PASS: your_generated_password
-   ```
+   
+   </details>
 
 ---
 
@@ -111,13 +119,13 @@ Update `.github/workflows/deploy-full.yml` to deploy server too:
 PORT=5000
 NODE_ENV=production
 
-# Database (MySQL via cPanel)
+# Database (MySQL via cPanel) - ✅ YOUR ACTUAL CREDENTIALS
 DB_HOST=localhost
-DB_NAME=username_taxi_app
-DB_USER=username_taxi_user
-DB_PASS=your_database_password_here
+DB_NAME=mawdqtvped_taxi_app
+DB_USER=mawdqtvped_username_taxi_app
+DB_PASS=@QWERTYasd
 
-# Security - CHANGE THIS!
+# Security - ⚠️ CHANGE THIS!
 JWT_SECRET=your_super_secret_random_string_change_this_now
 
 # CORS
@@ -128,11 +136,15 @@ GOOGLE_MAPS_API_KEY=
 STRIPE_SECRET_KEY=
 ```
 
-**Important:** Replace:
-- `username_taxi_app` with actual database name (with prefix)
-- `username_taxi_user` with actual user (with prefix)
-- `your_database_password_here` with actual password
-- `JWT_SECRET` with a long random string
+**✅ Database credentials are already filled in!**
+
+**⚠️ Important:** You MUST change:
+- `JWT_SECRET` to a long random string (for security!)
+
+**Generate secure JWT_SECRET:**
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
 
 ---
 
