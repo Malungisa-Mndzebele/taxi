@@ -1,4 +1,10 @@
 // Test setup for web app tests
+const { TextEncoder, TextDecoder } = require('util');
+
+// Polyfill TextEncoder and TextDecoder for Node.js
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+
 const { JSDOM } = require('jsdom');
 
 // Setup global test environment

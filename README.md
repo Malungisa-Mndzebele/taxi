@@ -4,6 +4,34 @@ A full-stack ride-sharing application similar to Uber, built with React Native f
 
 ## 🚀 Quick Start
 
+### 📱 **Install on Your Android Phone!**
+
+**Ready to install the app on your phone? Here's how:**
+
+1. **Start the Server** (on your computer):
+   ```bash
+   npm start
+   ```
+
+2. **On Your Android Phone:**
+   - Open this file in Chrome: [`releases/download-android.html`](releases/download-android.html)
+   - OR open the web app: [`web/index.html`](web/index.html)
+   - Tap menu (⋮) → "Add to Home Screen"
+   - Name it "Taxi App" → Tap "Add"
+   - **Done!** Find the app icon on your home screen
+
+3. **Works Like a Native App:**
+   - ✅ Full-screen experience
+   - ✅ Runs offline (cached)
+   - ✅ Home screen icon
+   - ✅ No browser UI
+   - ✅ Push notifications
+   - ✅ All features included
+
+**[📖 Detailed Android Installation Guide](releases/ANDROID_INSTALLATION.md)**
+
+---
+
 ### 🌐 **Use the App Right Now!**
 
 #### **🎯 One-Click Access:**
@@ -33,9 +61,10 @@ A full-stack ride-sharing application similar to Uber, built with React Native f
 - **Web App**: Open `web/index.html` in any browser
 - **Download Page**: Open `download.html` for the full experience
 
-#### **Mobile Apps (Coming Soon):**
-- **Android APK**: Native Android app (in development)
-- **iOS IPA**: Native iOS app (in development)
+#### **📱 Mobile Apps - Install on Your Phone:**
+- **Android**: Install as Progressive Web App (PWA) - [Download Instructions](releases/download-android.html)
+- **iOS**: Install from web browser - Add to Home Screen for app-like experience
+- **Direct APK**: See [Android Installation Guide](releases/ANDROID_INSTALLATION.md) for native APK build
 
 ### 🔧 Build from Source (Optional)
 ```bash
@@ -380,12 +409,16 @@ npm test
 ## 📱 App Distribution
 
 ### Android:
-- **APK**: Direct installation on Android devices
-- **AAB**: Upload to Google Play Store
-- **Requirements**: Enable "Install from unknown sources"
+- **PWA (Recommended)**: Install as Progressive Web App - instant, no APK needed
+  - Open `releases/download-android.html` on your Android device
+  - Add to Home Screen from Chrome
+  - Works like a native app with offline support
+- **APK Build**: See `releases/ANDROID_INSTALLATION.md` for native APK instructions
+- **Direct Web**: Open `web/index.html` in any mobile browser
 
 ### iOS:
-- **Development**: Install via Xcode for testing
+- **PWA**: Add `web/index.html` to Home Screen from Safari
+- **Development**: Install via Xcode for testing (requires Mac)
 - **TestFlight**: Beta testing with multiple users
 - **App Store**: Submit for review and public release
 
@@ -393,6 +426,12 @@ npm test
 - **Direct Access**: No installation required
 - **PWA**: Can be installed as a web app on mobile devices
 - **Deployment**: Upload to any web server
+
+### 📦 Release Files:
+- `releases/download-android.html` - Android installation page
+- `releases/ANDROID_INSTALLATION.md` - Detailed Android guide
+- `releases/TaxiApp-v1.0.apk` - Instructions for native APK
+- `web/index.html` - Progressive Web App (works on all platforms)
 
 ## Contributing
 

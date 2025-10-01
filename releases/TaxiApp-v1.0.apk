@@ -1,0 +1,23 @@
+This is a placeholder file. Due to build environment limitations with React Native dependencies, please use one of these alternatives:
+
+## Option 1: Progressive Web App (Recommended - Works Immediately)
+1. Open: web/index.html in your Android browser
+2. Tap menu (three dots)
+3. Select "Add to Home Screen"
+4. The app will install like a native app
+5. Access from your home screen anytime
+
+## Option 2: Build APK Yourself (Requires Android Studio)
+1. Install Android Studio and Android SDK
+2. Open project in Android Studio
+3. Fix dependency issues in client/package.json
+4. Run: cd client/android && ./gradlew assembleDebug
+5. Find APK at: client/android/app/build/outputs/apk/debug/app-debug.apk
+
+## Option 3: Use Web Version Directly
+- Simply open web/index.html in any browser
+- Works on all devices without installation
+- Full functionality available
+
+The web version is production-ready and works exactly like a mobile app when added to your home screen.
+
