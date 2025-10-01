@@ -62,9 +62,10 @@ A full-stack ride-sharing application similar to Uber, built with React Native f
 - **Download Page**: Open `download.html` for the full experience
 
 #### **📱 Mobile Apps - Install on Your Phone:**
-- **Android**: Install as Progressive Web App (PWA) - [Download Instructions](releases/download-android.html)
+- **Android PWA**: Install as Progressive Web App - [Download Instructions](releases/download-android.html) 
+- **Android APK**: Create installable APK file - [Get APK Guide](releases/HOW_TO_GET_APK.md)
 - **iOS**: Install from web browser - Add to Home Screen for app-like experience
-- **Direct APK**: See [Android Installation Guide](releases/ANDROID_INSTALLATION.md) for native APK build
+- **Full Guide**: See [Android Installation Guide](releases/ANDROID_INSTALLATION.md) for all options
 
 ### 🔧 Build from Source (Optional)
 ```bash
