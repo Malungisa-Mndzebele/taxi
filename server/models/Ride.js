@@ -24,7 +24,15 @@ const rideSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [Number],
-      required: true
+      required: true,
+      validate: {
+        validator: function(v) {
+          return Array.isArray(v) && v.length === 2 && 
+                 v[0] >= -180 && v[0] <= 180 && // longitude
+                 v[1] >= -90 && v[1] <= 90;     // latitude
+        },
+        message: 'Location must be a valid GeoJSON coordinate pair [longitude, latitude]'
+      }
     },
     address: {
       type: String,
@@ -39,7 +47,15 @@ const rideSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [Number],
-      required: true
+      required: true,
+      validate: {
+        validator: function(v) {
+          return Array.isArray(v) && v.length === 2 && 
+                 v[0] >= -180 && v[0] <= 180 && // longitude
+                 v[1] >= -90 && v[1] <= 90;     // latitude
+        },
+        message: 'Location must be a valid GeoJSON coordinate pair [longitude, latitude]'
+      }
     },
     address: {
       type: String,

@@ -1,7 +1,7 @@
-const express = require('express');
+﻿const express = require('express');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
-const { auth } = require('../middleware/auth');
+const auth = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ router.put('/profile', [
   auth,
   body('firstName').optional().trim().isLength({ min: 2 }).withMessage('First name must be at least 2 characters'),
   body('lastName').optional().trim().isLength({ min: 2 }).withMessage('Last name must be at least 2 characters'),
-  body('phone').optional().isMobilePhone().withMessage('Please provide a valid phone number')
+  body('phone').optional().matches(/^\+?\d{1,15}$/).withMessage('Please provide a valid phone number')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -25,213 +25,184 @@ router.put('/profile', [
 
     if (firstName) updates.firstName = firstName;
     if (lastName) updates.lastName = lastName;
-    if (phone) updates.phone = phone;
+    if (phone) {
+      // Check if phone is already in use by another user
+      const existingUser = await User.findOne({ phone, _id: { $ne: req.user.id } });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Phone number already in use' });
+      }
+      updates.phone = phone;
+    }
     if (profilePicture) updates.profilePicture = profilePicture;
 
     const user = await User.findByIdAndUpdate(
-      req.user._id,
+      req.user.id,
       updates,
       { new: true, runValidators: true }
     ).select('-password');
 
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
     res.json({
       message: 'Profile updated successfully',
-      user
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        isDriver: user.isDriver,
+        profilePicture: user.profilePicture
+      }
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
 // @route   PUT /api/users/location
 // @desc    Update user location
 // @access  Private
-router.put('/location', [
-  auth,
-  body('coordinates').isArray({ min: 2, max: 2 }).withMessage('Invalid coordinates'),
-  body('address').optional().isString()
-], async (req, res) => {
+router.put('/location', auth, async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    const { latitude, longitude } = req.body;
+
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({ message: 'Latitude and longitude must be numbers' });
     }
 
-    const { coordinates, address } = req.body;
+    if (latitude < -90 || latitude > 90) {
+      return res.status(400).json({ message: 'Invalid latitude value' });
+    }
 
-    req.user.currentLocation = {
-      type: 'Point',
-      coordinates,
-      address,
-      lastUpdated: new Date()
-    };
+    if (longitude < -180 || longitude > 180) {
+      return res.status(400).json({ message: 'Invalid longitude value' });
+    }
 
-    await req.user.save();
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      {
+        currentLocation: {
+          type: 'Point',
+          coordinates: [longitude, latitude]  // GeoJSON format: [longitude, latitude]
+        }
+      },
+      { new: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     res.json({
       message: 'Location updated successfully',
-      location: req.user.currentLocation
+      location: user.currentLocation
     });
   } catch (error) {
     console.error('Update location error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// @route   GET /api/users/nearby-drivers
-// @desc    Get nearby available drivers
-// @access  Private (Passenger)
-router.get('/nearby-drivers', auth, async (req, res) => {
-  try {
-    const { latitude, longitude, radius = 5 } = req.query;
-
-    if (!latitude || !longitude) {
-      return res.status(400).json({ message: 'Latitude and longitude are required' });
-    }
-
-    const drivers = await User.find({
-      role: 'driver',
-      'driverProfile.isOnline': true,
-      'driverProfile.isAvailable': true,
-      currentLocation: {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(longitude), parseFloat(latitude)]
-          },
-          $maxDistance: radius * 1000 // Convert km to meters
-        }
-      }
-    }).select('firstName lastName profilePicture driverProfile.rating driverProfile.vehicleInfo currentLocation');
-
-    res.json({ drivers });
-  } catch (error) {
-    console.error('Get nearby drivers error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   POST /api/users/rating
-// @desc    Rate a user after ride completion
+// @route   PUT /api/users/preferences
+// @desc    Update user preferences
 // @access  Private
-router.post('/rating', [
-  auth,
-  body('rideId').isMongoId().withMessage('Valid ride ID is required'),
-  body('rating').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
-  body('review').optional().isString().isLength({ max: 500 }).withMessage('Review must be less than 500 characters')
-], async (req, res) => {
+router.put('/preferences', auth, async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    const { preferences } = req.body;
+
+    if (!preferences || typeof preferences !== 'object') {
+      return res.status(400).json({ message: 'Invalid preferences format' });
     }
 
-    const { rideId, rating, review } = req.body;
-    const Ride = require('../models/Ride');
-
-    const ride = await Ride.findById(rideId);
-    if (!ride) {
-      return res.status(404).json({ message: 'Ride not found' });
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    // Check if user is authorized to rate
-    const isPassenger = ride.passenger.toString() === req.user._id.toString();
-    const isDriver = ride.driver && ride.driver.toString() === req.user._id.toString();
-    
-    if (!isPassenger && !isDriver) {
-      return res.status(403).json({ message: 'Not authorized' });
+    // Update only the provided preferences
+    for (const [key, value] of Object.entries(preferences)) {
+      user.preferences.set(key, value);
     }
 
-    if (ride.status !== 'completed') {
-      return res.status(400).json({ message: 'Can only rate completed rides' });
-    }
-
-    // Update rating based on user role
-    if (isPassenger) {
-      ride.rating.driverRating = rating;
-      ride.rating.driverReview = review;
-      
-      // Update driver's overall rating
-      const driver = await User.findById(ride.driver);
-      const totalRides = driver.driverProfile.totalRides;
-      const currentRating = driver.driverProfile.rating;
-      const newRating = ((currentRating * (totalRides - 1)) + rating) / totalRides;
-      driver.driverProfile.rating = Math.round(newRating * 10) / 10;
-      await driver.save();
-    } else {
-      ride.rating.passengerRating = rating;
-      ride.rating.passengerReview = review;
-      
-      // Update passenger's overall rating
-      const passenger = await User.findById(ride.passenger);
-      const totalRides = passenger.passengerProfile.totalRides;
-      const currentRating = passenger.passengerProfile.rating;
-      const newRating = ((currentRating * (totalRides - 1)) + rating) / totalRides;
-      passenger.passengerProfile.rating = Math.round(newRating * 10) / 10;
-      await passenger.save();
-    }
-
-    await ride.save();
+    await user.save();
 
     res.json({
-      message: 'Rating submitted successfully',
-      rating: {
-        rating,
-        review
-      }
+      message: 'Preferences updated successfully',
+      preferences: Object.fromEntries(user.preferences)
     });
   } catch (error) {
-    console.error('Submit rating error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Update preferences error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// @route   PUT /api/users/password
-// @desc    Change password
+// @route   PUT /api/users/device-token
+// @desc    Add or update device token
 // @access  Private
-router.put('/password', [
-  auth,
-  body('currentPassword').exists().withMessage('Current password is required'),
-  body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters')
-], async (req, res) => {
+router.put('/device-token', auth, async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ message: 'Device token is required' });
     }
 
-    const { currentPassword, newPassword } = req.body;
-
-    // Verify current password
-    const isMatch = await req.user.comparePassword(currentPassword);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Current password is incorrect' });
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
 
-    // Update password
-    req.user.password = newPassword;
-    await req.user.save();
+    // Add token if it doesn't exist
+    if (!user.deviceTokens.includes(token)) {
+      user.deviceTokens.push(token);
+      await user.save();
+    }
 
-    res.json({ message: 'Password updated successfully' });
+    res.json({
+      message: 'Device token updated successfully',
+      deviceTokens: user.deviceTokens
+    });
   } catch (error) {
-    console.error('Change password error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Update device token error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// @route   DELETE /api/users/account
-// @desc    Deactivate account
+// @route   DELETE /api/users/device-token
+// @desc    Remove device token
 // @access  Private
-router.delete('/account', auth, async (req, res) => {
+router.delete('/device-token', auth, async (req, res) => {
   try {
-    req.user.isActive = false;
-    await req.user.save();
+    const { token } = req.body;
 
-    res.json({ message: 'Account deactivated successfully' });
+    if (!token) {
+      return res.status(400).json({ message: 'Device token is required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Remove token if it exists
+    const tokenIndex = user.deviceTokens.indexOf(token);
+    if (tokenIndex > -1) {
+      user.deviceTokens.splice(tokenIndex, 1);
+      await user.save();
+    }
+
+    res.json({
+      message: 'Device token removed successfully',
+      deviceTokens: user.deviceTokens
+    });
   } catch (error) {
-    console.error('Deactivate account error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Remove device token error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 

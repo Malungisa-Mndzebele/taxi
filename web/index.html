@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Taxi App - Web Version</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Ride-sharing app like Uber - Request and accept rides">
+    <meta name="theme-color" content="#007bff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Taxi App">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -125,7 +142,9 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:5000/api';
+        // For phone access, use your computer's IP (e.g., http://172.16.44.117:5000/api)
+        // For local testing, use http://localhost:5000/api
+        const API_BASE = 'http://172.16.44.117:5000/api';
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
@@ -436,6 +455,44 @@
             }
         }
 
+        // PWA Install functionality
+        let deferredPrompt;
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+        
+        // Handle PWA install prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button
+            const installBtn = document.createElement('button');
+            installBtn.innerHTML = '📱 Install App';
+            installBtn.className = 'btn btn-primary';
+            installBtn.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 1000; background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;';
+            installBtn.onclick = () => {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            };
+            document.body.appendChild(installBtn);
+        });
+        
         // Check backend health on page load and show interface if already logged in
         window.onload = () => {
             checkHealth();

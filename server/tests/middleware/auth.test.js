@@ -62,7 +62,10 @@ describe('Auth Middleware', () => {
       await auth(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Token is not valid' });
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ 
+        message: 'Token is not valid',
+        error: expect.any(String)
+      }));
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -78,7 +81,10 @@ describe('Auth Middleware', () => {
       await auth(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Token is not valid' });
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ 
+        message: 'Token is not valid',
+        error: expect.any(String)
+      }));
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -91,7 +97,7 @@ describe('Auth Middleware', () => {
       await auth(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ message: 'Token is not valid' });
+      expect(res.json).toHaveBeenCalledWith({ message: 'User not found or token is invalid' });
       expect(mockNext).not.toHaveBeenCalled();
     });
 

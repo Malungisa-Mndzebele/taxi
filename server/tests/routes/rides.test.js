@@ -1,49 +1,84 @@
 const request = require('supertest');
-const app = require('../../index');
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const { app } = require('../../test-server');
 const User = require('../../models/User');
 const Ride = require('../../models/Ride');
-const jwt = require('jsonwebtoken');
+const { setupTestEnvironment, teardownTestEnvironment } = require('../test-helper');
 
 describe('Ride Routes', () => {
   let passenger, driver, passengerToken, driverToken;
 
+  // Set up test environment before all tests
+  beforeAll(async () => {
+    await setupTestEnvironment();
+  });
+  
   beforeEach(async () => {
     // Create test users
     passenger = new User({
       firstName: 'John',
       lastName: 'Doe',
-      email: 'passenger@example.com',
-      phone: '+1234567890',
+      email: `passenger.${Date.now()}@example.com`,
+      phone: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
       password: 'password123',
-      role: 'passenger'
+      role: 'passenger',
+      isActive: true
     });
     await passenger.save();
-
+    
     driver = new User({
       firstName: 'Jane',
       lastName: 'Smith',
-      email: 'driver@example.com',
-      phone: '+0987654321',
+      email: `driver.${Date.now()}@example.com`,
+      phone: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
       password: 'password123',
       role: 'driver',
+      isActive: true,
       driverProfile: {
-        licenseNumber: 'DL123456',
+        licenseNumber: `DL${Math.floor(10000000 + Math.random() * 90000000)}`,
+        isOnline: true,
+        isAvailable: true,
         vehicleInfo: {
           make: 'Toyota',
           model: 'Camry',
           year: 2020,
-          color: 'White',
-          plateNumber: 'ABC-123'
-        },
-        isOnline: true,
-        isAvailable: true
+          color: 'Black',
+          plateNumber: `ABC${Math.floor(1000 + Math.random() * 9000)}`
+        }
       }
     });
     await driver.save();
+    
+    // Create JWT tokens with the correct payload structure
+    passengerToken = jwt.sign(
+      { userId: passenger._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+    
+    driverToken = jwt.sign(
+      { userId: driver._id },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+  });
 
-    // Create tokens
-    passengerToken = jwt.sign({ userId: passenger._id }, process.env.JWT_SECRET || 'test-secret');
-    driverToken = jwt.sign({ userId: driver._id }, process.env.JWT_SECRET || 'test-secret');
+  afterAll(async () => {
+    try {
+      // Clean up test data
+      await User.deleteMany({});
+      await Ride.deleteMany({});
+      await teardownTestEnvironment();
+    } catch (error) {
+      console.error('Error during test cleanup:', error);
+      throw error;
+    }
+  });
+
+  beforeEach(async () => {
+    // Clean up rides before each test
+    await Ride.deleteMany({});
   });
 
   describe('POST /api/rides/request', () => {
@@ -69,7 +104,9 @@ describe('Ride Routes', () => {
         .expect(201);
 
       expect(response.body.message).toBe('Ride requested successfully');
-      expect(response.body.ride.passenger.toString()).toBe(passenger._id.toString());
+      // Handle case where passenger might be an object with _id or just the ID string
+      const passengerId = response.body.ride.passenger._id || response.body.ride.passenger;
+      expect(passengerId.toString()).toBe(passenger._id.toString());
       expect(response.body.ride.status).toBe('requested');
       expect(response.body.ride.fare.totalFare).toBeDefined();
     });
@@ -185,7 +222,8 @@ describe('Ride Routes', () => {
         .expect(200);
 
       expect(response.body.message).toBe('Ride accepted successfully');
-      expect(response.body.ride.driver.toString()).toBe(driver._id.toString());
+      const driverId = response.body.ride.driver._id ? response.body.ride.driver._id.toString() : response.body.ride.driver.toString();
+      expect(driverId).toBe(driver._id.toString());
       expect(response.body.ride.status).toBe('accepted');
     });
 
@@ -288,7 +326,7 @@ describe('Ride Routes', () => {
         .set('Authorization', `Bearer ${passengerToken}`)
         .expect(403);
 
-      expect(response.body.message).toBe('Not authorized');
+      expect(response.body.message).toBe('Insufficient permissions');
     });
 
     it('should reject arrival for wrong driver', async () => {

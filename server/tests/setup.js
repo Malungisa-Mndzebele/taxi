@@ -1,46 +1,32 @@
-const { MongoMemoryServer } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
+const { setupTestEnvironment, teardownTestEnvironment } = require('./test-helper');
+const { Server } = require('socket.io');
 
-// Set JWT secret for tests
-process.env.JWT_SECRET = 'test-secret-key-for-testing';
-
-let mongoServer;
-
-beforeAll(async () => {
-  try {
-    mongoServer = await MongoMemoryServer.create();
-    const mongoUri = mongoServer.getUri();
-    
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-  } catch (error) {
-    console.error('Test setup error:', error);
-  }
-});
-
-afterAll(async () => {
-  try {
-    if (mongoose.connection.readyState !== 0) {
-      await mongoose.disconnect();
-    }
-    if (mongoServer) {
-      await mongoServer.stop();
-    }
-  } catch (error) {
-    console.error('Test cleanup error:', error);
-  }
-});
-
-afterEach(async () => {
-  try {
-    const collections = mongoose.connection.collections;
-    for (const key in collections) {
-      const collection = collections[key];
+// Clear database before each test
+beforeEach(async () => {
+  // Drop all collections
+  const collections = mongoose.connection.collections;
+  for (const key in collections) {
+    const collection = collections[key];
+    try {
       await collection.deleteMany({});
+    } catch (err) {
+      console.warn(`Error clearing collection ${key}:`, err.message);
     }
-  } catch (error) {
-    console.error('Test cleanup error:', error);
   }
+});
+
+// Set up test environment before all tests
+beforeAll(async () => {
+  await setupTestEnvironment();
+});
+
+// Clean up test environment after all tests
+afterAll(async () => {
+  await teardownTestEnvironment();
+});
+
+test('Test environment is set up correctly', () => {
+  expect(process.env.NODE_ENV).toBe('test');
+  expect(process.env.JWT_SECRET).toBeDefined();
 });

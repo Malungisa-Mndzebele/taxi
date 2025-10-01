@@ -1,8 +1,9 @@
 const request = require('supertest');
-const app = require('../../index');
+const { app } = require('../../test-server');
 const User = require('../../models/User');
 const Ride = require('../../models/Ride');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
 describe('Ride Flow Integration Tests', () => {
   let passenger, driver, passengerToken, driverToken;

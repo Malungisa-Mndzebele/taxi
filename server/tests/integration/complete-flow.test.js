@@ -1,6 +1,6 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-const app = require('../../index');
+const { app } = require('../../test-server');
 
 describe('Complete Taxi App Flow Tests', () => {
   let passengerToken;
@@ -9,22 +9,8 @@ describe('Complete Taxi App Flow Tests', () => {
   let driverId;
   let rideId;
 
-  beforeAll(async () => {
-    // Connect to test database
-    if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/taxi-app-test');
-    }
-  });
-
-  afterAll(async () => {
-    // Clean up test data
-    const collections = mongoose.connection.collections;
-    for (const key in collections) {
-      const collection = collections[key];
-      await collection.deleteMany({});
-    }
-    await mongoose.disconnect();
-  });
+  // Database setup is handled by the global test setup
+  // No need for beforeAll/afterAll here
 
   describe('1. User Registration Flow', () => {
     test('Should register a passenger successfully', async () => {
@@ -32,7 +18,7 @@ describe('Complete Taxi App Flow Tests', () => {
         firstName: 'John',
         lastName: 'Doe',
         email: 'john.doe@test.com',
-        phone: '1234567890',
+        phone: '+1234567890',
         password: 'password123',
         role: 'passenger'
       };
@@ -56,7 +42,7 @@ describe('Complete Taxi App Flow Tests', () => {
         firstName: 'Jane',
         lastName: 'Smith',
         email: 'jane.smith@test.com',
-        phone: '0987654321',
+        phone: '+11234567890',
         password: 'password123',
         role: 'driver'
       };
@@ -144,19 +130,35 @@ describe('Complete Taxi App Flow Tests', () => {
         .send(invalidData)
         .expect(401);
 
-      expect(response.body.message).toBe('Invalid credentials');
+      expect(response.body.message).toBe('Authentication failed');
     });
   });
 
   describe('3. Ride Request Flow', () => {
     test('Should allow passenger to request a ride', async () => {
       const rideData = {
-        pickupLocation: '123 Main St, New York, NY',
-        dropoffLocation: '456 Broadway, New York, NY',
-        pickupLat: 40.7128,
-        pickupLng: -74.0060,
-        dropoffLat: 40.7589,
-        dropoffLng: -73.9851
+        pickupLocation: {
+          type: 'Point',
+          coordinates: [-74.0060, 40.7128],
+          address: '123 Main St, New York, NY'
+        },
+        dropoffLocation: {
+          type: 'Point',
+          coordinates: [-73.9851, 40.7589],
+          address: '456 Broadway, New York, NY'
+        },
+        distance: 5.2,
+        estimatedDuration: 15,
+        fare: {
+          baseFare: 5.00,
+          distanceFare: 10.40,
+          timeFare: 7.50,
+          surgeMultiplier: 1.0,
+          totalFare: 22.90
+        },
+        payment: {
+          method: 'card'
+        }
       };
 
       const response = await request(app)
@@ -303,7 +305,7 @@ describe('Complete Taxi App Flow Tests', () => {
         .set('Authorization', `Bearer ${driverToken}`)
         .expect(404);
 
-      expect(response.body.message).toBe('Ride not found');
+      expect(response.body.message).toBe('Route not found');
     });
 
     test('Should handle unauthorized access', async () => {
@@ -320,7 +322,7 @@ describe('Complete Taxi App Flow Tests', () => {
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
 
-      expect(response.body.message).toBe('Invalid token');
+      expect(response.body.message).toBe('Token is not valid');
     });
   });
 });

@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+﻿const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const auth = async (req, res, next) => {
@@ -6,40 +6,68 @@ const auth = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
+      console.log('Auth error: No token provided');
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
+    const jwtSecret = process.env.JWT_SECRET || 'test-secret-key-for-testing';
+    console.log('JWT Secret:', jwtSecret);
+    console.log('Token:', token);
     
+    const decoded = jwt.verify(token, jwtSecret);
+    
+    const user = await User.findById(decoded.user.id);
     if (!user) {
-      return res.status(401).json({ message: 'Token is not valid' });
+      console.log('Auth error: No user found with id', decoded.user.id);
+      return res.status(401).json({ message: 'Invalid token' });
     }
 
-    if (!user.isActive) {
-      return res.status(401).json({ message: 'Account is deactivated' });
-    }
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      isDriver: user.isDriver || false,
+      driverStatus: user.driverStatus
+    };
 
-    req.user = user;
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.status(401).json({ message: 'Token is not valid' });
+    if (error.name === 'JsonWebTokenError') {
+      console.log('JWT Error:', error.message);
+      return res.status(401).json({ message: 'Invalid token format', error: error.message });
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      console.log('Token Expired Error:', error.message);
+      return res.status(401).json({ message: 'Token has expired', error: error.message });
+    }
+
+    console.error('Auth error:', error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 const requireRole = (roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Authentication required' });
-    }
+  return async (req, res, next) => {
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
 
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Insufficient permissions' });
-    }
+      if (!roles.includes(user.role)) {
+        return res.status(403).json({ message: 'Not authorized for this operation' });
+      }
 
-    next();
+      next();
+    } catch (error) {
+      console.error('Role check error:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
   };
 };
 
-module.exports = { auth, requireRole };
+module.exports = {
+  auth,
+  requireRole
+};

@@ -4,15 +4,16 @@
   "description": "A ride-sharing app similar to Uber",
   "main": "index.js",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "nodemon server/index.js",
+    "start": "cd server && node index.js",
+    "dev": "cd server && nodemon index.js",
     "client": "cd client && npm start",
-    "server": "nodemon server/index.js",
-    "build": "cd client && npm run build",
-    "install-client": "cd client && npm install",
-    "install-server": "cd server && npm install",
-    "install-all": "npm run install-client && npm run install-server",
-    "dev-all": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && nodemon index.js",
+    "web": "cd web && node server.js",
+    "test": "cd server && jest --runInBand",
+    "test:watch": "cd server && jest --watch",
+    "test:coverage": "cd server && jest --coverage",
+    "install-all": "concurrently \"cd client && npm install\" \"cd server && npm install\" \"cd web && npm install\"",
+    "dev-all": "concurrently \"npm run server\" \"npm run web\"",
     "build-android": "node build-apps.js --android",
     "build-ios": "node build-apps.js --ios",
     "build-all": "node build-apps.js --all",
@@ -20,7 +21,10 @@
     "prepare-release": "node prepare-release.js --all",
     "release": "npm run prepare-release && echo 'Release files ready in releases/ directory'",
     "build-simple": "node build-simple.js",
-    "create-download": "node create-simple-download.js"
+    "create-download": "node create-simple-download.js",
+    "build-mobile": "node build-mobile.js --android",
+    "create-mobile-app": "node create-mobile-app.js",
+    "setup-android": "node setup-android.js"
   },
   "keywords": [
     "ride-sharing",
@@ -35,6 +39,7 @@
     "nodemon": "^3.0.1"
   },
   "dependencies": {
-    "axios": "^1.12.2"
+    "axios": "^1.12.2",
+    "express": "^5.1.0"
   }
 }

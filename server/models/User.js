@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
@@ -34,6 +34,15 @@ const userSchema = new mongoose.Schema({
     enum: ['passenger', 'driver'],
     default: 'passenger'
   },
+  driverStatus: {
+    type: String,
+    enum: ['online', 'offline'],
+    default: 'offline'
+  },
+  isDriver: {
+    type: Boolean,
+    default: false
+  },
   profilePicture: {
     type: String,
     default: ''
@@ -54,102 +63,80 @@ const userSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [Number],
-      default: [0, 0]
-    },
-    address: String,
-    lastUpdated: {
-      type: Date,
-      default: Date.now
-    }
-  },
-  // Driver specific fields
-  driverProfile: {
-    licenseNumber: String,
-    vehicleInfo: {
-      make: String,
-      model: String,
-      year: Number,
-      color: String,
-      plateNumber: String
-    },
-    rating: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5
-    },
-    totalRides: {
-      type: Number,
-      default: 0
-    },
-    isOnline: {
-      type: Boolean,
-      default: false
-    },
-    isAvailable: {
-      type: Boolean,
-      default: false
-    }
-  },
-  // Passenger specific fields
-  passengerProfile: {
-    rating: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5
-    },
-    totalRides: {
-      type: Number,
-      default: 0
-    },
-    paymentMethods: [{
-      type: {
-        type: String,
-        enum: ['card', 'cash', 'wallet']
-      },
-      details: mongoose.Schema.Types.Mixed,
-      isDefault: {
-        type: Boolean,
-        default: false
+      required: false,
+      validate: {
+        validator: function(v) {
+          if (!v || !Array.isArray(v)) return false;
+          if (v.length !== 2) return false;
+          if (v[0] < -180 || v[0] > 180) return false;
+          if (v[1] < -90 || v[1] > 90) return false;
+          return true;
+        },
+        message: props => `${props.value} is not a valid coordinate pair`
       }
-    }]
-  }
-}, {
-  timestamps: true
-});
-
-// Index for geospatial queries
-userSchema.index({ 'currentLocation': '2dsphere' });
-
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+    }
+  },
+  preferences: {
+    type: Map,
+    of: String,
+    default: new Map()
+  },
+  deviceTokens: [{
+    type: String
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
 });
 
-// Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
-};
-
-// Get full name
 userSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
 });
 
-// Transform JSON output
 userSchema.methods.toJSON = function() {
   const user = this.toObject();
   delete user.password;
   return user;
 };
 
-module.exports = mongoose.model('User', userSchema);
+userSchema.pre('save', async function(next) {
+  const user = this;
+
+  if (user.isModified('role')) {
+    user.isDriver = user.role === 'driver';
+  }
+
+  if (user.isModified('password')) {
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(user.password, salt);
+  }
+
+  if (user.isModified()) {
+    user.updatedAt = Date.now();
+  }
+
+  next();
+});
+
+userSchema.pre('save', function(next) {
+  if (this.isModified('currentLocation.coordinates')) {
+    if (this.currentLocation.coordinates.some(coord => typeof coord !== 'number')) {
+      next(new Error('Location coordinates must be numbers'));
+      return;
+    }
+  }
+  next();
+});
+
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+const User = mongoose.model('User', userSchema);
+
+module.exports = User;
