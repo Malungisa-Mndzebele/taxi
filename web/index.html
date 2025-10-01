@@ -142,9 +142,13 @@
     </div>
 
     <script>
-        // For phone access, use your computer's IP (e.g., http://172.16.44.117:5000/api)
-        // For local testing, use http://localhost:5000/api
-        const API_BASE = 'http://172.16.44.117:5000/api';
+        // Auto-detect API URL based on environment
+        // Production: Use relative path or configure backend URL
+        // Local: Use localhost or local IP
+        const isProduction = window.location.hostname === 'khasinogaming.com';
+        const API_BASE = isProduction 
+            ? 'https://khasinogaming.com/api'  // Change this to your backend URL
+            : 'http://localhost:5000/api';      // Local development
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
