@@ -42,7 +42,7 @@ jobs:
           server: server28.shared.spaceship.host
           username: app@khasinogaming.com
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /home/mawdqtvped/khasinogaming.com/app/
+          server-dir: ./
           exclude: |
             **/.git*
             **/.git*/**
