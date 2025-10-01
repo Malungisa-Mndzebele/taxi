@@ -1,0 +1,101 @@
+name: Full Deploy to Hosting
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        description: 'Deployment type'
+        required: true
+        default: 'web-only'
+        type: choice
+        options:
+          - web-only
+          - server-only
+          - full
+
+jobs:
+  deploy-web:
+    if: github.event.inputs.deploy_type == 'web-only' || github.event.inputs.deploy_type == 'full'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v3
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: 🏗️ Prepare web files
+        run: |
+          echo "Preparing web app for deployment..."
+          cd web
+          
+          # Update API URL to your hosted backend
+          # sed -i 's|http://localhost:5000|https://khasinogaming.com/api|g' index.html
+          
+          echo "Web files ready"
+          
+      - name: 📤 Deploy Web App
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: server28.shared.spaceship.host
+          username: app@khasinogaming.com
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /home/mawdqtvped/khasinogaming.com/app/
+          local-dir: ./web/
+          exclude: |
+            **/node_modules/**
+            **/.git*
+            **/tests/**
+            package.json
+            package-lock.json
+            
+  deploy-server:
+    if: github.event.inputs.deploy_type == 'server-only' || github.event.inputs.deploy_type == 'full'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v3
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: 📥 Install server dependencies
+        run: |
+          cd server
+          npm install --production
+          
+      - name: 🏗️ Prepare server files
+        run: |
+          cd server
+          
+          # Create .env template
+          cat > .env.production << 'EOF'
+          PORT=5000
+          NODE_ENV=production
+          MONGODB_URI=mongodb://localhost:27017/taxi-app
+          JWT_SECRET=CHANGE_THIS_TO_SECURE_SECRET
+          CLIENT_URL=https://khasinogaming.com/app
+          EOF
+          
+          echo "Server files ready"
+          
+      - name: 📤 Deploy Server Files
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: server28.shared.spaceship.host
+          username: app@khasinogaming.com
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /home/mawdqtvped/khasinogaming.com/app/server/
+          local-dir: ./server/
+          exclude: |
+            **/.git*
+            **/tests/**
+            .env.example
+            config.env.example
+

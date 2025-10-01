@@ -1,0 +1,63 @@
+name: Deploy to Hosting
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🚀 Checkout code
+        uses: actions/checkout@v3
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: 📥 Install dependencies
+        run: |
+          echo "Installing server dependencies..."
+          cd server
+          npm install --production
+          cd ..
+          
+          echo "Installing web dependencies..."
+          cd web
+          npm install --production
+          cd ..
+          
+      - name: 🏗️ Build web app
+        run: |
+          echo "Web app is ready for deployment"
+          # Add any build steps here if needed
+          
+      - name: 📤 Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: server28.shared.spaceship.host
+          username: app@khasinogaming.com
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /home/mawdqtvped/khasinogaming.com/app/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .github/**
+            client/**
+            docs/**
+            releases/download-android.html
+            *.md
+            .gitignore
+            .env.example
+            config.env.example
+            docker-compose.yml
+            Dockerfile
+            *.sh
+            *.bat
+            *.ps1
+

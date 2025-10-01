@@ -1,0 +1,53 @@
+# Git files
+.git
+.gitignore
+.github
+
+# Node modules (will be installed on server)
+**/node_modules/
+
+# Development files
+*.md
+README.md
+*.test.js
+**/__tests__/
+**/tests/
+
+# Build scripts
+*.sh
+*.bat
+*.ps1
+build-*.js
+create-*.js
+setup-*.js
+
+# Client app (not needed on web host)
+client/
+
+# Documentation
+docs/
+releases/
+
+# Docker files
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Environment examples
+.env.example
+config.env.example
+*.env.example
+
+# Local files
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
