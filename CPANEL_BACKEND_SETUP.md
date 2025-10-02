@@ -109,7 +109,7 @@ Update `.github/workflows/deploy-full.yml` to deploy server too:
 
 **Via cPanel File Manager:**
 1. Go to **Files** → **File Manager**
-2. Navigate to `/home/mawdqtvped/khasinogaming.com/api/`
+2. Navigate to `/home/mawdqtvped/khasinogaming.com/app/server/`
 3. Click **+ File**
 4. Name: `.env`
 5. Edit and add:
@@ -159,7 +159,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 2. **Navigate to backend:**
    ```bash
-   cd /home/mawdqtvped/khasinogaming.com/api
+   cd /home/mawdqtvped/khasinogaming.com/app/server
    ```
 
 3. **Install dependencies:**
