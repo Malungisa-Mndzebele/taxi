@@ -1,10 +1,9 @@
 // Service Worker for Taxi App PWA
 const CACHE_NAME = 'taxi-app-v1';
 const urlsToCache = [
-  '/',
-  '/web/',
-  '/web/index.html',
-  '/web/manifest.json'
+  '/app/',
+  '/app/index.html',
+  '/app/manifest.json'
 ];
 
 // Install event
