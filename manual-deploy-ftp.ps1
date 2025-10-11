@@ -5,10 +5,11 @@ Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host " Manual FTP Deployment" -ForegroundColor Yellow
 Write-Host "========================================`n" -ForegroundColor Cyan
 
-$ftpServer = "ftp://server28.shared.spaceship.host"
-$ftpPath = "/home/mawdqtvped/khasinogaming.com/app/"
-$ftpUser = "app@khasinogaming.com"
-$ftpPassword = "@QWERTYasd"
+# SECURITY: Replace with your actual credentials
+$ftpServer = "ftp://your-ftp-server.com"
+$ftpPath = "/home/your_username/yourdomain.com/app/"
+$ftpUser = "your_ftp_username"
+$ftpPassword = "your_ftp_password"
 
 Write-Host "FTP Server: $ftpServer" -ForegroundColor White
 Write-Host "Target Path: $ftpPath" -ForegroundColor White
@@ -83,7 +84,7 @@ Write-Host "❌ Failed: $failCount files" -ForegroundColor Red
 
 if ($successCount -gt 0) {
     Write-Host "`n🎉 Deployment completed!" -ForegroundColor Green
-    Write-Host "`n📱 Visit: https://khasinogaming.com/app/" -ForegroundColor Cyan
+    Write-Host "`n📱 Visit: https://yourdomain.com/app/" -ForegroundColor Cyan
     Write-Host "   Wait 1-2 minutes for cache to clear`n" -ForegroundColor Yellow
 }
 else {
@@ -96,6 +97,6 @@ Write-Host "========================================`n" -ForegroundColor Cyan
 # Ask to open browser
 $open = Read-Host "Open website in browser? (y/n)"
 if ($open -eq "y" -or $open -eq "Y") {
-    Start-Process "https://khasinogaming.com/app/"
+    Start-Process "https://yourdomain.com/app/"
 }
 

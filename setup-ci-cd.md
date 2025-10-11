@@ -10,7 +10,7 @@
 
 3. **Add:**
    - **Name:** `FTP_PASSWORD`
-   - **Secret:** `@QWERTYasd`
+   - **Secret:** `your_ftp_password` (get from hosting provider)
 
 4. **Click:** "Add secret"
 

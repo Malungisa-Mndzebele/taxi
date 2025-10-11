@@ -45,21 +45,21 @@ Your cPanel hosting at **khasinogaming.com** includes:
    
    - Navigate to: **Databases** → **MySQL® Databases**
    - Under **Create New Database:**
-     - Database Name: `taxi_app`
-     - Click **Create Database**
-   - Full name will be: `mawdqtvped_taxi_app`
+    - Database Name: `taxi_app`
+    - Click **Create Database**
+  - Full name will be: `your_cpanel_prefix_taxi_app`
 
-   - Under **MySQL Users** → **Add New User:**
-     - Username: `username_taxi_app`
-     - Password: Generate strong password
-     - Click **Create User**
-   - Full name will be: `mawdqtvped_username_taxi_app`
+  - Under **MySQL Users** → **Add New User:**
+    - Username: `username_taxi_app`
+    - Password: Generate strong password
+    - Click **Create User**
+  - Full name will be: `your_cpanel_prefix_username_taxi_app`
 
-   - Under **Add User To Database:**
-     - User: `mawdqtvped_username_taxi_app`
-     - Database: `mawdqtvped_taxi_app`
-     - Click **Add**
-   - Select **ALL PRIVILEGES**
+  - Under **Add User To Database:**
+    - User: `your_cpanel_prefix_username_taxi_app`
+    - Database: `your_cpanel_prefix_taxi_app`
+    - Click **Add**
+  - Select **ALL PRIVILEGES**
    - Click **Make Changes**
    
    </details>

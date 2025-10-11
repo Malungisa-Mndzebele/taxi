@@ -20,7 +20,7 @@ Before deployment works, you need to add your FTP password as a GitHub secret.
 ### Step 2: Add FTP Password
 
 - **Name:** `FTP_PASSWORD`
-- **Value:** `@QWERTYasd`
+- **Value:** `your_ftp_password` (get from hosting provider)
 - Click **Add secret**
 
 ---
