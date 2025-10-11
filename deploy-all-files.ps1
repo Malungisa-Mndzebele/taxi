@@ -5,10 +5,11 @@ Write-Host " Deploying All Taxi App Files"
 Write-Host "========================================"
 Write-Host ""
 
-$ftpServer = "ftp://server28.shared.spaceship.host"
+# SECURITY: Replace these with your actual credentials
+$ftpServer = "ftp://your-ftp-server.com"
 $ftpPath = "/"
-$ftpUser = "app@khasinogaming.com"
-$ftpPassword = "@QWERTYasd"
+$ftpUser = "your-ftp-username"
+$ftpPassword = "your-ftp-password"
 
 # All files to upload
 $files = @(
@@ -68,7 +69,7 @@ Write-Host ""
 Write-Host "Uploaded: $successCount files" -ForegroundColor Green
 Write-Host "Failed: $failCount files" -ForegroundColor Red
 Write-Host ""
-Write-Host "Visit: https://khasinogaming.com/app/"
+Write-Host "Visit: https://yourdomain.com/app/"
 Write-Host "Wait 1-2 minutes, then hard refresh (Ctrl+Shift+R)"
 Write-Host ""
 Write-Host "========================================"

@@ -26,13 +26,15 @@ Your cPanel hosting at **khasinogaming.com** includes:
 
 2. **✅ Database Already Created!**
    
-   Your database is already set up:
-   ```
-   Database Name: mawdqtvped_taxi_app
-   Database User: mawdqtvped_username_taxi_app
-   Database Password: @QWERTYasd
-   Database Host: localhost
-   ```
+  You need to set up a MySQL database in cPanel:
+  ```
+  Database Name: your_prefix_taxi_app
+  Database User: your_prefix_username
+  Database Password: your_secure_password
+  Database Host: localhost
+  ```
+  
+  See Step 1 below for database creation instructions.
    
    ✅ **Skip to Step 2** (Upload Backend Files)
    
@@ -69,14 +71,14 @@ Your cPanel hosting at **khasinogaming.com** includes:
 ### Option A: Via FTP (Easiest)
 
 1. **Connect via FileZilla or similar:**
-   - Host: server28.shared.spaceship.host
-   - Username: app@khasinogaming.com
-   - Password: @QWERTYasd
+   - Host: your-ftp-server.com
+   - Username: your_ftp_username
+   - Password: your_ftp_password
    - Port: 21
 
 2. **Navigate to:**
    ```
-   /home/mawdqtvped/khasinogaming.com/api/
+   /home/your_username/yourdomain.com/api/
    ```
    
    If `/api/` folder doesn't exist, create it.
@@ -109,7 +111,7 @@ Update `.github/workflows/deploy-full.yml` to deploy server too:
 
 **Via cPanel File Manager:**
 1. Go to **Files** → **File Manager**
-2. Navigate to `/home/mawdqtvped/khasinogaming.com/app/server/`
+2. Navigate to `/home/your_username/yourdomain.com/app/server/`
 3. Click **+ File**
 4. Name: `.env`
 5. Edit and add:
@@ -119,11 +121,11 @@ Update `.github/workflows/deploy-full.yml` to deploy server too:
 PORT=5000
 NODE_ENV=production
 
-# Database (MySQL via cPanel) - ✅ YOUR ACTUAL CREDENTIALS
+# Database (MySQL via cPanel) - ⚠️ REPLACE WITH YOUR ACTUAL CREDENTIALS
 DB_HOST=localhost
-DB_NAME=mawdqtvped_taxi_app
-DB_USER=mawdqtvped_username_taxi_app
-DB_PASS=@QWERTYasd
+DB_NAME=your_database_name
+DB_USER=your_database_user
+DB_PASS=your_secure_password
 
 # Security - ⚠️ CHANGE THIS!
 JWT_SECRET=your_super_secret_random_string_change_this_now
@@ -154,12 +156,12 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 1. **Connect to SSH:**
    ```bash
-   ssh app@khasinogaming.com@server28.shared.spaceship.host
+   ssh your_username@your_server.com
    ```
 
 2. **Navigate to backend:**
    ```bash
-   cd /home/mawdqtvped/khasinogaming.com/app/server
+   cd /home/your_username/yourdomain.com/app/server
    ```
 
 3. **Install dependencies:**

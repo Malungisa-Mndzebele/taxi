@@ -1,12 +1,14 @@
 # ⚡ Quick Backend Deployment
 
-## ✅ Database Ready!
+## ✅ Database Setup Required
 
-Your MySQL database is already set up:
-- **Database:** `mawdqtvped_taxi_app`
-- **User:** `mawdqtvped_username_taxi_app`  
-- **Password:** `@QWERTYasd`
+You need to create a MySQL database in cPanel first:
+- **Database:** `your_prefix_taxi_app`
+- **User:** `your_prefix_username`  
+- **Password:** `your_secure_password`
 - **Host:** `localhost`
+
+See `CPANEL_BACKEND_SETUP.md` for database creation steps.
 
 ---
 
@@ -33,9 +35,9 @@ PORT=5000
 NODE_ENV=production
 
 DB_HOST=localhost
-DB_NAME=mawdqtvped_taxi_app
-DB_USER=mawdqtvped_username_taxi_app
-DB_PASS=@QWERTYasd
+DB_NAME=your_database_name
+DB_USER=your_database_user
+DB_PASS=your_secure_password
 
 JWT_SECRET=PASTE_YOUR_GENERATED_SECRET_HERE
 CLIENT_URL=https://khasinogaming.com/app
@@ -48,11 +50,11 @@ CLIENT_URL=https://khasinogaming.com/app
 ### Step 3: Upload Backend Files (5 min)
 
 **Via FTP:**
-- Server: `server28.shared.spaceship.host`
-- User: `app@khasinogaming.com`
-- Password: `@QWERTYasd`
+- Server: `your_ftp_server`
+- User: `your_ftp_username`
+- Password: `your_ftp_password`
 
-**Upload to:** `/home/mawdqtvped/khasinogaming.com/api/`
+**Upload to:** `/home/your_username/your_domain/api/`
 
 **Upload these:**
 ```
@@ -71,13 +73,13 @@ server/
 
 **SSH into server:**
 ```bash
-ssh app@khasinogaming.com@server28.shared.spaceship.host
+ssh your_username@your_server
 ```
 
 **Run these commands:**
 ```bash
 # Navigate to backend
-cd /home/mawdqtvped/khasinogaming.com/api
+cd /home/your_username/your_domain/api
 
 # Install dependencies
 npm install --production
@@ -99,7 +101,7 @@ pm2 startup
 
 ### Step 5: Configure Reverse Proxy (2 min)
 
-**Create/Edit:** `/home/mawdqtvped/khasinogaming.com/.htaccess`
+**Create/Edit:** `/home/your_username/your_domain/.htaccess`
 
 **Add these lines:**
 ```apache
@@ -116,8 +118,8 @@ RewriteRule /api/(.*)  ws://localhost:5000/api/$1 [P,L]
 
 **OR via cPanel:**
 - **Software** → **Setup Node.js App**
-- Application root: `/home/mawdqtvped/khasinogaming.com/api`
-- Application URL: `khasinogaming.com/api`
+- Application root: `/home/your_username/your_domain/api`
+- Application URL: `yourdomain.com/api`
 - Startup file: `index.js`
 
 ---
@@ -131,7 +133,7 @@ curl http://localhost:5000/api/health
 
 **Test from browser:**
 ```
-https://khasinogaming.com/api/health
+https://yourdomain.com/api/health
 ```
 
 **Expected response:**
@@ -172,7 +174,7 @@ pm2 restart taxi-api
 pm2 stop taxi-api
 
 # Test database connection
-mysql -u mawdqtvped_username_taxi_app -p mawdqtvped_taxi_app
+mysql -u your_database_user -p your_database_name
 ```
 
 ---
@@ -181,15 +183,15 @@ mysql -u mawdqtvped_username_taxi_app -p mawdqtvped_taxi_app
 
 ### Backend not starting?
 ```bash
-cd /home/mawdqtvped/khasinogaming.com/api
+cd /home/your_username/your_domain/api
 pm2 logs taxi-api
 # Check logs for errors
 ```
 
 ### Database connection failed?
 - Verify credentials in .env
-- Test: `mysql -u mawdqtvped_username_taxi_app -p`
-- Password: `@QWERTYasd`
+- Test: `mysql -u your_database_user -p`
+- Check password in your .env file
 
 ### API not accessible from web?
 - Check reverse proxy (.htaccess)
@@ -201,11 +203,11 @@ pm2 logs taxi-api
 ## 🎉 Done!
 
 Your backend is now running at:
-**https://khasinogaming.com/api/**
+**https://yourdomain.com/api/**
 
 Your full app:
-- **Frontend:** https://khasinogaming.com/app/
-- **Backend:** https://khasinogaming.com/api/
+- **Frontend:** https://yourdomain.com/app/
+- **Backend:** https://yourdomain.com/api/
 
 **Everything is connected!** 🚀
 

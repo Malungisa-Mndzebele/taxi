@@ -5,8 +5,8 @@
 ```
 Name: taxi-app
 Status: online ✅
-PID: 140852
-Location: /home/mawdqtvped/khasinogaming.com/app/server/
+PID: [Your Process ID]
+Location: /home/your_username/your_domain/app/server/
 ```
 
 ---
@@ -54,7 +54,7 @@ Your backend runs on `localhost:5000` but needs to be accessible at `https://kha
 #### Option A: Using cPanel Application Manager (Easiest)
 
 1. **Log into cPanel:**
-   - Go to: https://khasinogaming.com:2083
+   - Go to: https://yourdomain.com:2083
 
 2. **Navigate to:**
    - **Software** → **Setup Node.js App**
@@ -64,7 +64,7 @@ Your backend runs on `localhost:5000` but needs to be accessible at `https://kha
 4. **Fill in:**
    - Node.js version: 18.x or latest
    - Application mode: Production
-   - Application root: `/home/mawdqtvped/khasinogaming.com/app/server`
+   - Application root: `/home/your_username/your_domain/app/server`
    - Application URL: Choose your domain → then add `/api`
    - Application startup file: `index.js`
    - Environment variables:
@@ -84,7 +84,7 @@ Your backend runs on `localhost:5000` but needs to be accessible at `https://kha
 
 1. **In cPanel File Manager, navigate to:**
    ```
-   /home/mawdqtvped/khasinogaming.com/
+   /home/your_username/your_domain/
    ```
 
 2. **Create/Edit `.htaccess` file**
@@ -117,7 +117,7 @@ ProxyPassReverse /api http://localhost:5000/api
 
 **Contact your hosting support and ask:**
 
-> "Can you please configure a reverse proxy to forward requests from https://khasinogaming.com/api to http://localhost:5000/api? My Node.js backend is running on port 5000."
+> "Can you please configure a reverse proxy to forward requests from https://yourdomain.com/api to http://localhost:5000/api? My Node.js backend is running on port 5000."
 
 ---
 
@@ -148,11 +148,11 @@ curl http://localhost:5000/api/health
 ```
 
 ### Test 3: Public API
-**Browser:** https://khasinogaming.com/api/health
+**Browser:** https://yourdomain.com/api/health
 **Expected:** JSON response
 
 ### Test 4: Frontend Connection
-1. Visit: https://khasinogaming.com/app/
+1. Visit: https://yourdomain.com/app/
 2. Open browser console (F12)
 3. Should see: "Backend health check passed" or similar
 4. No CORS errors
@@ -191,14 +191,14 @@ If local works but public doesn't = proxy issue
 
 **Check environment variables:**
 ```bash
-cd /home/mawdqtvped/khasinogaming.com/app/server
+cd /home/your_username/your_domain/app/server
 cat .env
 ```
 
 **Verify database connection:**
 ```bash
-mysql -u mawdqtvped_username_taxi_app -p
-# Password: @QWERTYasd
+mysql -u your_database_user -p
+# Password: Check your .env file
 ```
 
 ---
@@ -223,9 +223,9 @@ mysql -u mawdqtvped_username_taxi_app -p
 ## 📊 Your Application URLs
 
 ```
-Frontend:  https://khasinogaming.com/app/       ✅ Live
-Backend:   https://khasinogaming.com/api/       ⏳ Needs proxy
-Database:  localhost:3306/mawdqtvped_taxi_app   ✅ Ready
+Frontend:  https://yourdomain.com/app/          ✅ Live
+Backend:   https://yourdomain.com/api/          ⏳ Needs proxy
+Database:  localhost:3306/your_database_name    ✅ Ready
 Server:    PM2 (taxi-app)                        ✅ Running
 ```
 
@@ -253,14 +253,14 @@ pm2 save
 curl http://localhost:5000/api/health
 
 # Test API publicly (after proxy setup)
-curl https://khasinogaming.com/api/health
+curl https://yourdomain.com/api/health
 
 # View environment
-cd /home/mawdqtvped/khasinogaming.com/app/server
+cd /home/your_username/your_domain/app/server
 cat .env
 
 # Database connection test
-mysql -u mawdqtvped_username_taxi_app -p
+mysql -u your_database_user -p
 ```
 
 ---

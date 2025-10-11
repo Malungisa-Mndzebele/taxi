@@ -5,12 +5,13 @@ Write-Host " Uploading Taxi App to Hosting"
 Write-Host "========================================"
 Write-Host ""
 
-$ftpServer = "ftp://server28.shared.spaceship.host"
+# SECURITY: Replace these with your actual credentials
+$ftpServer = "ftp://your-ftp-server.com"
 $ftpPath = "/"
-$ftpUser = "app@khasinogaming.com"
-$ftpPassword = "@QWERTYasd"
+$ftpUser = "your-ftp-username"
+$ftpPassword = "your-ftp-password"
 
-Write-Host "Target: https://khasinogaming.com/app/"
+Write-Host "Target: https://yourdomain.com/app/"
 Write-Host ""
 
 # Upload index.html
@@ -49,12 +50,12 @@ Write-Host "========================================"
 Write-Host " Deployment Complete!"
 Write-Host "========================================"
 Write-Host ""
-Write-Host "Visit: https://khasinogaming.com/app/"
+Write-Host "Visit: https://yourdomain.com/app/"
 Write-Host "Wait 1-2 minutes for cache to clear"
 Write-Host ""
 
 $open = Read-Host "Open website? (y/n)"
 if ($open -eq "y") {
-    Start-Process "https://khasinogaming.com/app/"
+    Start-Process "https://yourdomain.com/app/"
 }
 

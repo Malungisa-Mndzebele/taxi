@@ -6,11 +6,11 @@
 PORT=5000
 NODE_ENV=production
 
-# Database Configuration - ✅ YOUR ACTUAL CREDENTIALS
+# Database Configuration - ⚠️ REPLACE WITH YOUR ACTUAL CREDENTIALS
 DB_HOST=localhost
-DB_NAME=mawdqtvped_taxi_app
-DB_USER=mawdqtvped_username_taxi_app
-DB_PASS=@QWERTYasd
+DB_NAME=your_database_name
+DB_USER=your_database_user
+DB_PASS=your_secure_password
 
 # Security - ⚠️ CRITICAL: CHANGE THIS!
 # Generate with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
