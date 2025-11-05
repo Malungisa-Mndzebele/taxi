@@ -134,3 +134,56 @@ Flipper-Folly
 
 # Temporary files created by Metro to check the health of the file watcher
 .metro-health-check*
+
+# Sensitive files - NEVER COMMIT THESE!
+*.env
+*.env.*
+.env.local
+.env.production
+.env.production.ready
+.env.test
+config.env
+*.key
+*.pem
+*.p12
+*.keystore
+!debug.keystore
+
+# Credentials and secrets
+credentials.json
+secrets.json
+*.secret
+*.credentials
+
+# Deployment scripts with credentials
+deploy-*.ps1
+deploy-*.sh
+*deploy*.ps1
+manual-*.ps1
+
+# Database dumps
+*.sql
+*.dump
+
+# Server logs with potential sensitive data
+server/logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# Build outputs
+dist/
+build/
+*.apk
+*.ipa
+*.aab

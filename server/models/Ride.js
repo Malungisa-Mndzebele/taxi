@@ -189,4 +189,10 @@ rideSchema.virtual('duration').get(function() {
   return null;
 });
 
+// Indexes for performance
+rideSchema.index({ passenger: 1, createdAt: -1 });
+rideSchema.index({ driver: 1, createdAt: -1 });
+rideSchema.index({ status: 1 });
+rideSchema.index({ 'timeline.completedAt': 1 });
+
 module.exports = mongoose.model('Ride', rideSchema);

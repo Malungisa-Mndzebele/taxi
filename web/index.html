@@ -146,9 +146,12 @@
         // Auto-detect API URL based on environment
         // Production: Use relative path or configure backend URL
         // Local: Use localhost or local IP
-        const isProduction = window.location.hostname === 'khasinogaming.com';
+        // TODO: Replace 'yourdomain.com' with your actual production domain
+        const isProduction = window.location.hostname !== 'localhost' && 
+                             !window.location.hostname.startsWith('127.0.0.1') &&
+                             !window.location.hostname.startsWith('192.168.');
         const API_BASE = isProduction 
-            ? 'https://khasinogaming.com/api'  // Change this to your backend URL
+            ? `${window.location.protocol}//${window.location.hostname}/api`  // Use same domain as frontend
             : 'http://localhost:5000/api';      // Local development
         let authToken = localStorage.getItem('authToken');
         let currentUser = JSON.parse(localStorage.getItem('currentUser'));

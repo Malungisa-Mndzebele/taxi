@@ -1,4 +1,4 @@
-﻿const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
@@ -66,7 +66,9 @@ const userSchema = new mongoose.Schema({
       required: false,
       validate: {
         validator: function(v) {
-          if (!v || !Array.isArray(v)) return false;
+          // Allow undefined or null (field is not required)
+          if (!v || v.length === 0) return true;
+          if (!Array.isArray(v)) return false;
           if (v.length !== 2) return false;
           if (v[0] < -180 || v[0] > 180) return false;
           if (v[1] < -90 || v[1] > 90) return false;
@@ -74,6 +76,45 @@ const userSchema = new mongoose.Schema({
         },
         message: props => `${props.value} is not a valid coordinate pair`
       }
+    },
+    address: {
+      type: String,
+      required: false
+    },
+    lastUpdated: {
+      type: Date,
+      required: false
+    }
+  },
+  driverProfile: {
+    licenseNumber: {
+      type: String,
+      required: false
+    },
+    vehicleInfo: {
+      make: { type: String },
+      model: { type: String },
+      year: { type: Number },
+      color: { type: String },
+      plateNumber: { type: String }
+    },
+    isOnline: {
+      type: Boolean,
+      default: false
+    },
+    isAvailable: {
+      type: Boolean,
+      default: false
+    },
+    rating: {
+      type: Number,
+      default: 5.0,
+      min: 0,
+      max: 5
+    },
+    totalRides: {
+      type: Number,
+      default: 0
     }
   },
   preferences: {
@@ -136,6 +177,11 @@ userSchema.pre('save', function(next) {
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
+
+// Indexes for performance
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ phone: 1 }, { unique: true });
+userSchema.index({ 'currentLocation.coordinates': '2dsphere' }); // Geospatial index for nearby driver queries
 
 const User = mongoose.model('User', userSchema);
 
