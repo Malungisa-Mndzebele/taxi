@@ -1,0 +1,6 @@
+# Cursor Rules
+
+## Command Execution
+- Always run terminal commands one at a time. Never run multiple commands in parallel or simultaneously.
+- Wait for each command to complete before running the next one.
+

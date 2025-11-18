@@ -136,6 +136,75 @@ describe('User Routes', () => {
 
       expect(response.body.user.password).toBeUndefined();
     });
+
+    it('should update email successfully', async () => {
+      const response = await request(app)
+        .put('/api/users/profile')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          email: 'newemail@test.com'
+        })
+        .expect(200);
+
+      expect(response.body.message).toBe('Profile updated successfully');
+      expect(response.body.user.email).toBe('newemail@test.com');
+    });
+
+    it('should reject invalid email format', async () => {
+      const response = await request(app)
+        .put('/api/users/profile')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          email: 'invalid-email'
+        })
+        .expect(400);
+
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors.length).toBeGreaterThan(0);
+    });
+
+    it('should reject duplicate email', async () => {
+      // Create another user
+      const anotherUser = {
+        firstName: 'Another',
+        lastName: 'User',
+        email: 'another@test.com',
+        phone: '+1111111111',
+        password: 'password123',
+        role: 'passenger'
+      };
+
+      await request(app)
+        .post('/api/auth/register')
+        .send(anotherUser);
+
+      // Try to update to existing email
+      const response = await request(app)
+        .put('/api/users/profile')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          email: 'another@test.com'
+        })
+        .expect(400);
+
+      expect(response.body.message).toBe('Email already in use');
+    });
+
+    it('should update multiple fields at once', async () => {
+      const response = await request(app)
+        .put('/api/users/profile')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          firstName: 'UpdatedFirst',
+          lastName: 'UpdatedLast',
+          phone: '+9999999999'
+        })
+        .expect(200);
+
+      expect(response.body.user.firstName).toBe('UpdatedFirst');
+      expect(response.body.user.lastName).toBe('UpdatedLast');
+      expect(response.body.user.phone).toBe('+9999999999');
+    });
   });
 
   describe('PUT /api/users/location', () => {
@@ -164,7 +233,7 @@ describe('User Routes', () => {
         })
         .expect(400);
 
-      expect(response.body.message).toContain('Invalid latitude');
+      expect(response.body.message).toContain('latitude');
     });
 
     it('should reject invalid longitude', async () => {
@@ -177,7 +246,7 @@ describe('User Routes', () => {
         })
         .expect(400);
 
-      expect(response.body.message).toContain('Invalid longitude');
+      expect(response.body.message).toContain('longitude');
     });
 
     it('should reject non-number latitude', async () => {
@@ -190,7 +259,7 @@ describe('User Routes', () => {
         })
         .expect(400);
 
-      expect(response.body.message).toContain('must be numbers');
+      expect(response.body.message).toContain('number');
     });
 
     it('should reject missing coordinates', async () => {

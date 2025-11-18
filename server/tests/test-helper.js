@@ -12,18 +12,50 @@ async function setupTestEnvironment() {
   process.env.JWT_SECRET = 'test-jwt-secret-key-for-testing';
   
   try {
-    // Create in-memory MongoDB instance
-    mongoServer = await MongoMemoryServer.create();
+    // Check if already connected
+    if (mongoose.connection.readyState === 1) {
+      console.log('✅ Test database already connected');
+      return;
+    }
+    
+    // Create in-memory MongoDB instance if not already created
+    if (!mongoServer) {
+      mongoServer = await MongoMemoryServer.create();
+    }
+    
     const mongoUri = mongoServer.getUri();
     
     // Connect to in-memory database
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    
-    console.log('✅ Test database connected');
+    if (mongoose.connection.readyState === 0) {
+      await mongoose.connect(mongoUri, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+      });
+      console.log('✅ Test database connected');
+      
+      // Create indexes after connection
+      try {
+        const User = require('../models/User');
+        await User.collection.createIndex({ 'currentLocation.coordinates': '2dsphere' });
+        await User.collection.createIndex({ email: 1 }, { unique: true });
+        await User.collection.createIndex({ phone: 1 }, { unique: true });
+        
+        const Ride = require('../models/Ride');
+        await Ride.collection.createIndex({ 'pickupLocation': '2dsphere' });
+        await Ride.collection.createIndex({ 'dropoffLocation': '2dsphere' });
+      } catch (indexError) {
+        // Indexes might already exist, that's okay
+        if (!indexError.message.includes('already exists')) {
+          console.warn('Index creation warning:', indexError.message);
+        }
+      }
+    }
   } catch (error) {
+    // If connection already exists, that's okay
+    if (error.message.includes('Can\'t call `openUri()` on an active connection')) {
+      console.log('✅ Test database already connected (reusing existing connection)');
+      return;
+    }
     console.error('❌ Error setting up test environment:', error);
     throw error;
   }
@@ -69,8 +101,9 @@ async function clearDatabase() {
  */
 function generateTestToken(userId) {
   const jwt = require('jsonwebtoken');
+  // Support both token formats for compatibility
   return jwt.sign(
-    { user: { id: userId } },
+    { userId: userId },
     process.env.JWT_SECRET || 'test-jwt-secret-key-for-testing',
     { expiresIn: '1h' }
   );

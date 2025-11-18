@@ -3,19 +3,35 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const { validate, validateRequest } = require('../middleware/validation');
+const { authLimiter } = require('../middleware/rateLimiter');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
-// Generate JWT token
-const generateToken = (userId) => {
-  const jwtSecret = process.env.JWT_SECRET || 'test-secret-key-for-testing';
-  return jwt.sign({ userId }, jwtSecret, { expiresIn: '7d' });
+// Generate JWT token helper
+const generateToken = (userId, user = null) => {
+  const jwtSecret = process.env.JWT_SECRET || 'test-secret';
+  // Support both token formats for compatibility
+  if (user) {
+    return jwt.sign(
+      { 
+        user: {
+          id: userId,
+          email: user.email,
+          isDriver: user.isDriver
+        }
+      },
+      jwtSecret,
+      { expiresIn: '1h' }
+    );
+  }
+  return jwt.sign({ userId }, jwtSecret, { expiresIn: '1h' });
 };
 
 // @route   POST /api/auth/register
 // @desc    Register a new user
 // @access  Public
-router.post('/register', validate('register'), validateRequest, async (req, res) => {
+router.post('/register', authLimiter, validate('register'), validateRequest, async (req, res) => {
   try {
     const { firstName, lastName, email, phone, password, role = 'passenger' } = req.body;
 
@@ -32,29 +48,31 @@ router.post('/register', validate('register'), validateRequest, async (req, res)
     }
 
     // Create new user
-    const user = new User({
+    const userData = {
       firstName,
       lastName,
       email,
       phone,
       password,
       role
-    });
+    };
 
+    // Initialize driverProfile for drivers
+    if (role === 'driver') {
+      userData.driverProfile = {
+        isOnline: false,
+        isAvailable: false,
+        rating: 5.0,
+        totalRides: 0
+      };
+      userData.isDriver = true;
+    }
+
+    const user = new User(userData);
     await user.save();
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        user: {
-          id: user.id,
-          email: user.email,
-          isDriver: user.isDriver
-        }
-      },
-      process.env.JWT_SECRET || 'test-secret-key-for-testing',
-      { expiresIn: '7d' }
-    );
+    // Generate JWT token - use _id to ensure consistency
+    const token = generateToken(user._id.toString(), user);
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -71,7 +89,7 @@ router.post('/register', validate('register'), validateRequest, async (req, res)
       }
     });
   } catch (error) {
-    console.error('Register error:', error);
+    logger.error('Register error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -79,25 +97,25 @@ router.post('/register', validate('register'), validateRequest, async (req, res)
 // @route   POST /api/auth/login
 // @desc    Authenticate user & get token
 // @access  Public
-router.post('/login', validate('login'), validateRequest, async (req, res) => {
+router.post('/login', authLimiter, validate('login'), validateRequest, async (req, res) => {
   try {
     const { email, password } = req.body;
 
     // Check if user exists
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Authentication failed' });
     }
 
     // Validate password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Authentication failed' });
     }
 
     // Check if user account is active
     if (user.isActive === false) {
-      return res.status(400).json({ message: 'Account is deactivated' });
+      return res.status(401).json({ message: 'Account is deactivated' });
     }
 
     // Skip verification check for testing/development
@@ -105,18 +123,8 @@ router.post('/login', validate('login'), validateRequest, async (req, res) => {
     //   return res.status(403).json({ message: 'Account not verified' });
     // }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        user: {
-          id: user.id,
-          email: user.email,
-          isDriver: user.isDriver
-        }
-      },
-      process.env.JWT_SECRET || 'test-secret-key-for-testing',
-      { expiresIn: '7d' }
-    );
+    // Generate JWT token - use _id to ensure consistency
+    const token = generateToken(user._id.toString(), user);
 
     res.json({
       message: 'Login successful',
@@ -134,7 +142,7 @@ router.post('/login', validate('login'), validateRequest, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -165,26 +173,86 @@ router.get('/me', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get current user error:', error);
+    logger.error('Get current user error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// @route   POST /api/auth/verify-phone
-// @desc    Verify user's phone number
+// @route   POST /api/auth/request-verification
+// @desc    Request phone verification code
 // @access  Private
-router.post('/verify-phone', auth, async (req, res) => {
+router.post('/request-verification', auth, async (req, res) => {
   try {
-    const { verificationCode } = req.body;
-    
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // In production, verify the code against SMS service
-    // For testing, we'll just mark as verified
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Set expiration to 10 minutes from now
+    const expirationTime = new Date(Date.now() + 10 * 60 * 1000);
+    
+    // Store code and expiration
+    user.verificationCode = verificationCode;
+    user.verificationCodeExpires = expirationTime;
+    await user.save();
+
+    // In production, integrate with SMS service (Twilio, AWS SNS, etc.)
+    // await smsService.send(user.phone, `Your verification code is: ${verificationCode}`);
+    
+    // For testing/development, return the code in response
+    const responseData = {
+      message: 'Verification code sent to your phone'
+    };
+    
+    if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
+      responseData.verificationCode = verificationCode;
+    }
+
+    res.json(responseData);
+  } catch (error) {
+    logger.error('Request verification error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// @route   POST /api/auth/verify-phone
+// @desc    Verify user's phone number with code
+// @access  Private
+router.post('/verify-phone', auth, async (req, res) => {
+  try {
+    const { verificationCode } = req.body;
+    
+    if (!verificationCode) {
+      return res.status(400).json({ message: 'Verification code is required' });
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if verification code exists
+    if (!user.verificationCode) {
+      return res.status(400).json({ message: 'No verification code found. Please request a new code.' });
+    }
+
+    // Check if code has expired
+    if (user.verificationCodeExpires < Date.now()) {
+      return res.status(400).json({ message: 'Verification code has expired. Please request a new code.' });
+    }
+
+    // Validate submitted code matches generated code
+    if (user.verificationCode !== verificationCode) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+
+    // Mark user as verified and clear verification code
     user.isVerified = true;
+    user.verificationCode = undefined;
+    user.verificationCodeExpires = undefined;
     await user.save();
 
     res.json({
@@ -195,7 +263,7 @@ router.post('/verify-phone', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Phone verification error:', error);
+    logger.error('Phone verification error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -203,7 +271,7 @@ router.post('/verify-phone', auth, async (req, res) => {
 // @route   POST /api/auth/forgot-password
 // @desc    Send password reset email
 // @access  Public
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -232,7 +300,7 @@ router.post('/forgot-password', async (req, res) => {
       resetToken: process.env.NODE_ENV === 'test' ? resetToken : undefined
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -278,7 +346,7 @@ router.post('/reset-password', async (req, res) => {
     if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
       return res.status(400).json({ message: 'Invalid or expired reset token' });
     }
-    console.error('Reset password error:', error);
+    logger.error('Reset password error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

@@ -108,7 +108,9 @@ describe('Ride Routes', () => {
       const passengerId = response.body.ride.passenger._id || response.body.ride.passenger;
       expect(passengerId.toString()).toBe(passenger._id.toString());
       expect(response.body.ride.status).toBe('requested');
+      expect(response.body.ride.fare).toBeDefined();
       expect(response.body.ride.fare.totalFare).toBeDefined();
+      expect(response.body.ride.payment).toBeDefined();
     });
 
     it('should reject ride request from driver', async () => {
@@ -237,6 +239,8 @@ describe('Ride Routes', () => {
     });
 
     it('should reject acceptance when driver is not available', async () => {
+      // Ensure driver is online but not available
+      driver.driverProfile.isOnline = true;
       driver.driverProfile.isAvailable = false;
       await driver.save();
 
@@ -347,7 +351,7 @@ describe('Ride Routes', () => {
         .set('Authorization', `Bearer ${otherDriverToken}`)
         .expect(403);
 
-      expect(response.body.message).toBe('Not authorized');
+      expect(response.body.message).toBe('Not authorized to update this ride');
     });
   });
 

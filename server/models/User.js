@@ -51,6 +51,14 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  verificationCode: {
+    type: String,
+    required: false
+  },
+  verificationCodeExpires: {
+    type: Date,
+    required: false
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -117,6 +125,18 @@ const userSchema = new mongoose.Schema({
       default: 0
     }
   },
+  passengerProfile: {
+    rating: {
+      type: Number,
+      default: 5.0,
+      min: 0,
+      max: 5
+    },
+    totalRides: {
+      type: Number,
+      default: 0
+    }
+  },
   preferences: {
     type: Map,
     of: String,
@@ -150,6 +170,38 @@ userSchema.pre('save', async function(next) {
 
   if (user.isModified('role')) {
     user.isDriver = user.role === 'driver';
+  }
+
+  // Initialize passengerProfile if it doesn't exist
+  if (!user.passengerProfile || !user.passengerProfile.rating) {
+    if (!user.passengerProfile) {
+      user.passengerProfile = {};
+    }
+    if (user.passengerProfile.rating === undefined) {
+      user.passengerProfile.rating = 5.0;
+    }
+    if (user.passengerProfile.totalRides === undefined) {
+      user.passengerProfile.totalRides = 0;
+    }
+  }
+
+  // Initialize driverProfile if it doesn't exist and user is a driver
+  if (user.role === 'driver') {
+    if (!user.driverProfile) {
+      user.driverProfile = {};
+    }
+    if (user.driverProfile.isOnline === undefined) {
+      user.driverProfile.isOnline = false;
+    }
+    if (user.driverProfile.isAvailable === undefined) {
+      user.driverProfile.isAvailable = false;
+    }
+    if (user.driverProfile.rating === undefined) {
+      user.driverProfile.rating = 5.0;
+    }
+    if (user.driverProfile.totalRides === undefined) {
+      user.driverProfile.totalRides = 0;
+    }
   }
 
   if (user.isModified('password')) {

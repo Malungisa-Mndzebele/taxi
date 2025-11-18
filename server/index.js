@@ -17,6 +17,9 @@ const rideRoutes = require('./routes/rides');
 const driverRoutes = require('./routes/drivers');
 const userRoutes = require('./routes/users');
 
+// Import error handling middleware
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+
 // Create Express app
 const app = express();
 
@@ -104,66 +107,11 @@ app.get('/', (req, res) => {
   });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', {
-    message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-    path: req.path,
-    method: req.method,
-    timestamp: new Date().toISOString()
-  });
+// 404 handler for undefined routes (must be before error handler)
+app.use(notFoundHandler);
 
-  // Handle JWT errors
-  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-    return res.status(401).json({
-      success: false,
-      error: 'Authentication failed',
-      message: 'Please authenticate to access this resource'
-    });
-  }
-
-  // Handle validation errors
-  if (err.name === 'ValidationError') {
-    return res.status(400).json({
-      success: false,
-      error: 'Validation Error',
-      message: err.message,
-      details: process.env.NODE_ENV === 'development' ? err : undefined
-    });
-  }
-
-  // Handle 404 errors
-  if (err.status === 404) {
-    return res.status(404).json({
-      success: false,
-      error: 'Not Found',
-      message: 'The requested resource was not found'
-    });
-  }
-
-  // Handle rate limit exceeded
-  if (err.status === 429) {
-    return res.status(429).json({
-      success: false,
-      error: 'Too Many Requests',
-      message: 'Rate limit exceeded, please try again later'
-    });
-  }
-
-  // Default error response
-  res.status(err.status || 500).json({
-    success: false,
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
+// Comprehensive error handling middleware (must be last)
+app.use(errorHandler);
 
 // Create HTTP server
 const server = http.createServer(app);

@@ -3,27 +3,10 @@ const { body, validationResult } = require('express-validator');
 const Ride = require('../models/Ride');
 const User = require('../models/User');
 const { auth, requireRole } = require('../middleware/auth');
+const fareCalculator = require('../services/fareCalculator');
+const logger = require('../utils/logger');
 
 const router = express.Router();
-
-// Calculate fare based on distance and time
-const calculateFare = (distance, duration, surgeMultiplier = 1.0) => {
-  const baseFare = 2.0; // Base fare
-  const perKmRate = 1.5; // Rate per kilometer
-  const perMinuteRate = 0.3; // Rate per minute
-
-  const distanceFare = distance * perKmRate;
-  const timeFare = duration * perMinuteRate;
-  const totalFare = (baseFare + distanceFare + timeFare) * surgeMultiplier;
-
-  return {
-    baseFare,
-    distanceFare,
-    timeFare,
-    surgeMultiplier,
-    totalFare: Math.round(totalFare * 100) / 100 // Round to 2 decimal places
-  };
-};
 
 // @route   POST /api/rides/request
 // @desc    Request a new ride
@@ -46,8 +29,8 @@ router.post('/request', [
 
     const { pickupLocation, dropoffLocation, distance, estimatedDuration, paymentMethod } = req.body;
 
-    // Calculate fare
-    const fare = calculateFare(distance, estimatedDuration);
+    // Calculate fare using fare calculator service
+    const fare = fareCalculator.calculateFare(distance, estimatedDuration);
 
     // Create new ride request
     const ride = new Ride({
@@ -64,46 +47,159 @@ router.post('/request', [
       },
       distance,
       estimatedDuration,
-      fare: fare.totalFare,
-      fareBreakdown: fare,
-      paymentMethod: paymentMethod || 'cash'
+      fare: {
+        baseFare: fare.baseFare,
+        distanceFare: fare.distanceFare,
+        timeFare: fare.timeFare,
+        surgeMultiplier: fare.surgeMultiplier,
+        totalFare: fare.totalFare
+      },
+      payment: {
+        method: paymentMethod || 'cash',
+        status: 'pending'
+      }
     });
 
     await ride.save();
 
-    // Find nearby drivers
-    const nearbyDrivers = await User.find({
-      role: 'driver',
-      isDriver: true,
-      driverStatus: 'online',
-      currentLocation: {
-        $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: pickupLocation.coordinates
-          },
-          $maxDistance: 5000 // 5 kilometers
+    // Find nearby drivers (handle geospatial query errors gracefully)
+    let nearbyDrivers = [];
+    try {
+      nearbyDrivers = await User.find({
+        role: 'driver',
+        isDriver: true,
+        'driverProfile.isOnline': true,
+        'driverProfile.isAvailable': true,
+        currentLocation: {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: pickupLocation.coordinates
+            },
+            $maxDistance: 5000 // 5 kilometers
+          }
         }
-      }
-    });
+      }).limit(10);
+    } catch (geoError) {
+      // If geospatial query fails (e.g., no index), fall back to simple query
+      logger.warn('Geospatial query failed, using fallback:', geoError.message);
+      nearbyDrivers = await User.find({
+        role: 'driver',
+        isDriver: true,
+        'driverProfile.isOnline': true,
+        'driverProfile.isAvailable': true
+      }).limit(10);
+    }
 
-    res.json({
+    // Populate passenger for response
+    await ride.populate('passenger', 'firstName lastName phone');
+
+    res.status(201).json({
       message: 'Ride requested successfully',
       ride: {
         id: ride.id,
         status: ride.status,
+        passenger: ride.passenger,
         pickupLocation: ride.pickupLocation,
         dropoffLocation: ride.dropoffLocation,
         distance: ride.distance,
         estimatedDuration: ride.estimatedDuration,
         fare: ride.fare,
-        fareBreakdown: ride.fareBreakdown,
-        paymentMethod: ride.paymentMethod
+        payment: ride.payment
       },
       availableDrivers: nearbyDrivers.length
     });
   } catch (error) {
-    console.error('Request ride error:', error);
+    logger.error('Request ride error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// @route   GET /api/rides/active
+// @desc    Get active rides for user
+// @access  Private
+router.get('/active', auth, async (req, res) => {
+  try {
+    const activeStatuses = ['requested', 'accepted', 'arrived', 'started'];
+    let query = { status: { $in: activeStatuses } };
+
+    // Filter by user role
+    if (req.user.role === 'passenger') {
+      query.passenger = req.user.id;
+    } else if (req.user.role === 'driver') {
+      query.driver = req.user.id;
+    }
+
+    const rides = await Ride.find(query)
+      .populate('passenger', 'firstName lastName phone profilePicture')
+      .populate('driver', 'firstName lastName phone profilePicture driverStatus')
+      .sort({ createdAt: -1 })
+      .exec();
+
+    res.json({ rides });
+  } catch (error) {
+    logger.error('Get active rides error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// @route   GET /api/rides/available
+// @desc    Get available rides for driver
+// @access  Private (Driver)
+router.get('/available', [auth, requireRole(['driver'])], async (req, res) => {
+  try {
+    const rides = await Ride.find({ status: 'requested' })
+      .populate('passenger', 'firstName lastName phone profilePicture')
+      .sort({ createdAt: -1 })
+      .exec();
+
+    res.json({ rides });
+  } catch (error) {
+    logger.error('Get available rides error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// @route   GET /api/rides/history
+// @desc    Get ride history for user
+// @access  Private
+router.get('/history', auth, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const completedStatuses = ['completed', 'cancelled'];
+    let query = { status: { $in: completedStatuses } };
+
+    // Filter by user role
+    if (req.user.role === 'passenger') {
+      query.passenger = req.user.id;
+    } else if (req.user.role === 'driver') {
+      query.driver = req.user.id;
+    }
+
+    const rides = await Ride.find(query)
+      .populate('passenger', 'firstName lastName phone profilePicture')
+      .populate('driver', 'firstName lastName phone profilePicture')
+      .sort({ completedAt: -1, cancelledAt: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    const total = await Ride.countDocuments(query);
+
+    res.json({
+      rides,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    logger.error('Get ride history error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -113,6 +209,11 @@ router.post('/request', [
 // @access  Private
 router.get('/:rideId', auth, async (req, res) => {
   try {
+    // Check if rideId is a valid ObjectId, otherwise return 404
+    if (!req.params.rideId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(404).json({ message: 'Route not found' });
+    }
+
     const ride = await Ride.findById(req.params.rideId)
       .populate('passenger', 'firstName lastName phone profilePicture')
       .populate('driver', 'firstName lastName phone profilePicture driverStatus')
@@ -130,16 +231,21 @@ router.get('/:rideId', auth, async (req, res) => {
 
     res.json({ ride });
   } catch (error) {
-    console.error('Get ride error:', error);
+    logger.error('Get ride error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// @route   PUT /api/rides/:rideId/accept
+// @route   POST /api/rides/:rideId/accept
 // @desc    Accept a ride request (Driver)
 // @access  Private
-router.put('/:rideId/accept', [auth, requireRole(['driver'])], async (req, res) => {
+const acceptRideHandler = async (req, res) => {
   try {
+    // Validate rideId
+    if (!req.params.rideId || req.params.rideId === 'undefined') {
+      return res.status(400).json({ message: 'Invalid ride ID' });
+    }
+    
     const ride = await Ride.findById(req.params.rideId)
       .populate('passenger', 'firstName lastName phone')
       .exec();
@@ -148,27 +254,108 @@ router.put('/:rideId/accept', [auth, requireRole(['driver'])], async (req, res) 
       return res.status(404).json({ message: 'Ride not found' });
     }
 
-    if (ride.status !== 'pending') {
+    if (ride.status !== 'requested') {
       return res.status(400).json({ message: 'Ride is no longer available' });
     }
 
     // Check if driver is online and available
-    const driver = await User.findById(req.user.id);
-    if (!driver.isDriver || driver.driverStatus !== 'online') {
-      return res.status(400).json({ message: 'Driver must be online to accept rides' });
+    // Use raw data as the source of truth (actual database state)
+    const rawDriver = await User.findById(req.user.id).lean();
+    if (!rawDriver || rawDriver.role !== 'driver') {
+      return res.status(403).json({ message: 'Only drivers can accept rides' });
+    }
+    
+    // Load as Mongoose document for later operations
+    let driver = await User.findById(req.user.id);
+    if (!driver || driver.role !== 'driver') {
+      return res.status(403).json({ message: 'Only drivers can accept rides' });
+    }
+    
+    // Use raw data as the source of truth - it's the actual database state
+    const driverProfile = rawDriver.driverProfile;
+    
+    if (!driverProfile) {
+      // Initialize driverProfile if it doesn't exist
+      await User.findByIdAndUpdate(
+        req.user.id,
+        {
+          $set: {
+            'driverProfile.isOnline': false,
+            'driverProfile.isAvailable': false,
+            'driverProfile.rating': 5.0,
+            'driverProfile.totalRides': 0
+          }
+        },
+        { new: true }
+      );
+      return res.status(400).json({ 
+        message: 'Driver profile not initialized. Please set driver status first.'
+      });
+    }
+    
+    // Check if driver is online - use raw data (database state)
+    const isOnline = driverProfile.isOnline === true;
+    if (!isOnline) {
+      return res.status(400).json({ 
+        message: 'Driver must be online to accept rides',
+        debug: { 
+          isOnline: driverProfile.isOnline,
+          driverStatus: rawDriver.driverStatus,
+          driverProfile: driverProfile
+        }
+      });
+    }
+    
+    // Check if driver is available - use raw data (database state)
+    const isAvailable = driverProfile.isAvailable === true;
+    if (!isAvailable) {
+      return res.status(400).json({ 
+        message: 'Driver is not available',
+        debug: { 
+          isAvailable: driverProfile.isAvailable,
+          isOnline: driverProfile.isOnline,
+          driverProfile: driverProfile
+        }
+      });
+    }
+    
+    // Sync to Mongoose document for later operations
+    if (!driver.driverProfile) {
+      driver.driverProfile = {
+        isOnline: driverProfile.isOnline || false,
+        isAvailable: driverProfile.isAvailable || false,
+        rating: driverProfile.rating || 5.0,
+        totalRides: driverProfile.totalRides || 0,
+        licenseNumber: driverProfile.licenseNumber,
+        vehicleInfo: driverProfile.vehicleInfo
+      };
+      driver.markModified('driverProfile');
+      await driver.save();
+      // Reload driver after sync
+      driver = await User.findById(req.user.id);
     }
 
     ride.driver = req.user.id;
     ride.status = 'accepted';
-    ride.acceptedAt = Date.now();
+    ride.timeline.acceptedAt = new Date();
+
+    // Mark driver as unavailable
+    driver.driverProfile.isAvailable = false;
+    driver.markModified('driverProfile');
+    await driver.save();
 
     await ride.save();
+
+    // Populate driver for response
+    await ride.populate('driver', 'firstName lastName phone');
+    await ride.populate('passenger', 'firstName lastName phone');
 
     res.json({
       message: 'Ride accepted successfully',
       ride: {
         id: ride.id,
         status: ride.status,
+        driver: ride.driver,
         passenger: {
           firstName: ride.passenger.firstName,
           lastName: ride.passenger.lastName,
@@ -179,15 +366,18 @@ router.put('/:rideId/accept', [auth, requireRole(['driver'])], async (req, res) 
       }
     });
   } catch (error) {
-    console.error('Accept ride error:', error);
+    logger.error('Accept ride error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
-});
+};
 
-// @route   PUT /api/rides/:rideId/arrive
+router.put('/:rideId/accept', [auth, requireRole(['driver'])], acceptRideHandler);
+router.post('/:rideId/accept', [auth, requireRole(['driver'])], acceptRideHandler);
+
+// @route   POST /api/rides/:rideId/arrive
 // @desc    Mark driver as arrived at pickup location
 // @access  Private (Driver)
-router.put('/:rideId/arrive', [auth, requireRole(['driver'])], async (req, res) => {
+router.post('/:rideId/arrive', [auth, requireRole(['driver'])], async (req, res) => {
   try {
     const ride = await Ride.findById(req.params.rideId);
     
@@ -204,27 +394,28 @@ router.put('/:rideId/arrive', [auth, requireRole(['driver'])], async (req, res) 
     }
 
     ride.status = 'arrived';
-    ride.arrivedAt = Date.now();
+    ride.timeline.arrivedAt = new Date();
     await ride.save();
 
     res.json({
-      message: 'Marked as arrived successfully',
+      message: 'Arrival confirmed',
       ride: {
         id: ride.id,
         status: ride.status,
-        arrivedAt: ride.arrivedAt
+        arrivedAt: ride.timeline.arrivedAt
       }
     });
   } catch (error) {
-    console.error('Mark arrival error:', error);
+    logger.error('Mark arrival error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
 // @route   PUT /api/rides/:rideId/start
+// @route   POST /api/rides/:rideId/start (for backward compatibility)
 // @desc    Start the ride
 // @access  Private (Driver)
-router.put('/:rideId/start', [auth, requireRole(['driver'])], async (req, res) => {
+const startRideHandler = async (req, res) => {
   try {
     const ride = await Ride.findById(req.params.rideId);
 
@@ -240,8 +431,8 @@ router.put('/:rideId/start', [auth, requireRole(['driver'])], async (req, res) =
       return res.status(400).json({ message: 'Cannot start ride in current status' });
     }
 
-    ride.status = 'in_progress';
-    ride.startedAt = Date.now();
+    ride.status = 'started';
+    ride.timeline.startedAt = new Date();
     await ride.save();
 
     res.json({
@@ -249,30 +440,24 @@ router.put('/:rideId/start', [auth, requireRole(['driver'])], async (req, res) =
       ride: {
         id: ride.id,
         status: ride.status,
-        startedAt: ride.startedAt
+        startedAt: ride.timeline.startedAt
       }
     });
   } catch (error) {
-    console.error('Start ride error:', error);
+    logger.error('Start ride error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
-});
+};
+
+router.put('/:rideId/start', [auth, requireRole(['driver'])], startRideHandler);
+router.post('/:rideId/start', [auth, requireRole(['driver'])], startRideHandler);
 
 // @route   PUT /api/rides/:rideId/complete
+// @route   POST /api/rides/:rideId/complete (for backward compatibility)
 // @desc    Complete the ride
 // @access  Private (Driver)
-router.put('/:rideId/complete', [
-  auth,
-  requireRole(['driver']),
-  body('endLocation.coordinates').isArray({ min: 2, max: 2 }).withMessage('Invalid end location coordinates'),
-  body('endLocation.address').notEmpty().withMessage('End location address is required')
-], async (req, res) => {
+const completeRideHandler = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const ride = await Ride.findById(req.params.rideId);
 
     if (!ride) {
@@ -283,22 +468,28 @@ router.put('/:rideId/complete', [
       return res.status(403).json({ message: 'Not authorized to update this ride' });
     }
 
-    if (ride.status !== 'in_progress') {
+    if (ride.status !== 'started') {
       return res.status(400).json({ message: 'Cannot complete ride in current status' });
     }
 
-    const { endLocation } = req.body;
-
     ride.status = 'completed';
-    ride.completedAt = Date.now();
-    ride.endLocation = {
-      type: 'Point',
-      coordinates: endLocation.coordinates,
-      address: endLocation.address
-    };
+    ride.timeline.completedAt = new Date();
+    ride.payment.status = 'completed';
+    ride.payment.paidAt = new Date();
 
-    // Calculate actual duration
-    ride.actualDuration = Math.round((ride.completedAt - ride.startedAt) / 1000 / 60); // in minutes
+    // Update driver and passenger stats
+    const driver = await User.findById(ride.driver);
+    if (driver && driver.driverProfile) {
+      driver.driverProfile.totalRides = (driver.driverProfile.totalRides || 0) + 1;
+      driver.driverProfile.isAvailable = true;
+      await driver.save();
+    }
+
+    const passenger = await User.findById(ride.passenger);
+    if (passenger && passenger.passengerProfile) {
+      passenger.passengerProfile.totalRides = (passenger.passengerProfile.totalRides || 0) + 1;
+      await passenger.save();
+    }
 
     await ride.save();
 
@@ -307,30 +498,25 @@ router.put('/:rideId/complete', [
       ride: {
         id: ride.id,
         status: ride.status,
-        completedAt: ride.completedAt,
-        endLocation: ride.endLocation,
-        actualDuration: ride.actualDuration
+        completedAt: ride.timeline.completedAt,
+        payment: ride.payment
       }
     });
   } catch (error) {
-    console.error('Complete ride error:', error);
+    logger.error('Complete ride error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
-});
+};
+
+router.put('/:rideId/complete', [auth, requireRole(['driver'])], completeRideHandler);
+router.post('/:rideId/complete', [auth, requireRole(['driver'])], completeRideHandler);
 
 // @route   PUT /api/rides/:rideId/cancel
+// @route   POST /api/rides/:rideId/cancel (for backward compatibility)
 // @desc    Cancel a ride
 // @access  Private (Passenger or Driver)
-router.put('/:rideId/cancel', [
-  auth,
-  body('reason').optional().isString().withMessage('Reason must be a string')
-], async (req, res) => {
+const cancelRideHandler = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
     const ride = await Ride.findById(req.params.rideId);
 
     if (!ride) {
@@ -352,9 +538,17 @@ router.put('/:rideId/cancel', [
     }
 
     ride.status = 'cancelled';
-    ride.cancelledAt = Date.now();
-    ride.cancelledBy = isPassenger ? 'passenger' : 'driver';
+    ride.timeline.cancelledAt = new Date();
     ride.cancellationReason = req.body.reason || 'No reason provided';
+
+    // If driver was assigned, make them available again
+    if (ride.driver) {
+      const driver = await User.findById(ride.driver);
+      if (driver && driver.driverProfile) {
+        driver.driverProfile.isAvailable = true;
+        await driver.save();
+      }
+    }
 
     await ride.save();
 
@@ -363,13 +557,85 @@ router.put('/:rideId/cancel', [
       ride: {
         id: ride.id,
         status: ride.status,
-        cancelledAt: ride.cancelledAt,
-        cancelledBy: ride.cancelledBy,
+        cancelledAt: ride.timeline.cancelledAt,
         cancellationReason: ride.cancellationReason
       }
     });
   } catch (error) {
-    console.error('Cancel ride error:', error);
+    logger.error('Cancel ride error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+router.put('/:rideId/cancel', [auth, body('reason').optional().isString().withMessage('Reason must be a string')], cancelRideHandler);
+router.post('/:rideId/cancel', [auth, body('reason').optional().isString().withMessage('Reason must be a string')], cancelRideHandler);
+
+// @route   PUT /api/rides/:rideId/status
+// @desc    Update ride status (for backward compatibility)
+// @access  Private (Driver)
+router.put('/:rideId/status', [auth, requireRole(['driver']), body('status').notEmpty().withMessage('Status is required')], async (req, res) => {
+  try {
+    const { status } = req.body;
+    const ride = await Ride.findById(req.params.rideId);
+
+    if (!ride) {
+      return res.status(404).json({ message: 'Ride not found' });
+    }
+
+    if (ride.driver.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to update this ride' });
+    }
+
+    // Map status values
+    const statusMap = {
+      'in-progress': 'started',
+      'in_progress': 'started'
+    };
+
+    const mappedStatus = statusMap[status] || status;
+
+    // Validate status transition
+    const validStatuses = ['accepted', 'arrived', 'started', 'completed', 'cancelled'];
+    if (!validStatuses.includes(mappedStatus)) {
+      return res.status(400).json({ message: 'Invalid status' });
+    }
+
+    ride.status = mappedStatus;
+    
+    // Update timeline
+    if (mappedStatus === 'started' && !ride.timeline.startedAt) {
+      ride.timeline.startedAt = new Date();
+    } else if (mappedStatus === 'completed' && !ride.timeline.completedAt) {
+      ride.timeline.completedAt = new Date();
+      ride.payment.status = 'completed';
+      ride.payment.paidAt = new Date();
+
+      // Update driver and passenger stats
+      const driver = await User.findById(ride.driver);
+      if (driver && driver.driverProfile) {
+        driver.driverProfile.totalRides = (driver.driverProfile.totalRides || 0) + 1;
+        driver.driverProfile.isAvailable = true;
+        await driver.save();
+      }
+
+      const passenger = await User.findById(ride.passenger);
+      if (passenger && passenger.passengerProfile) {
+        passenger.passengerProfile.totalRides = (passenger.passengerProfile.totalRides || 0) + 1;
+        await passenger.save();
+      }
+    }
+
+    await ride.save();
+
+    res.json({
+      message: 'Ride status updated successfully',
+      ride: {
+        id: ride.id,
+        status: ride.status
+      }
+    });
+  } catch (error) {
+    logger.error('Update ride status error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

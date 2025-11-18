@@ -13,10 +13,14 @@ describe('Ride Flow Integration Tests', () => {
     passenger = new User({
       firstName: 'John',
       lastName: 'Doe',
-      email: 'passenger@example.com',
-      phone: '+1234567890',
+      email: `passenger.${Date.now()}@example.com`,
+      phone: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
       password: 'password123',
       role: 'passenger',
+      passengerProfile: {
+        rating: 5.0,
+        totalRides: 0
+      },
       currentLocation: {
         type: 'Point',
         coordinates: [-122.4324, 37.78825],
@@ -28,8 +32,8 @@ describe('Ride Flow Integration Tests', () => {
     driver = new User({
       firstName: 'Jane',
       lastName: 'Smith',
-      email: 'driver@example.com',
-      phone: '+0987654321',
+      email: `driver.${Date.now()}@example.com`,
+      phone: `+1${Math.floor(1000000000 + Math.random() * 9000000000)}`,
       password: 'password123',
       role: 'driver',
       driverProfile: {
@@ -42,7 +46,9 @@ describe('Ride Flow Integration Tests', () => {
           plateNumber: 'ABC-123'
         },
         isOnline: true,
-        isAvailable: true
+        isAvailable: true,
+        rating: 5.0,
+        totalRides: 0
       },
       currentLocation: {
         type: 'Point',
@@ -59,6 +65,18 @@ describe('Ride Flow Integration Tests', () => {
 
   describe('Complete Ride Flow', () => {
     it('should complete a full ride from request to completion', async () => {
+      // Ensure driver is online and available before starting
+      driver.driverProfile.isOnline = true;
+      driver.driverProfile.isAvailable = true;
+      await driver.save();
+
+      // Also set driver online via API to ensure consistency
+      await request(app)
+        .put('/api/drivers/status')
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({ status: 'online' })
+        .expect(200);
+
       // Step 1: Passenger requests a ride
       const rideRequestData = {
         pickupLocation: {
@@ -131,6 +149,18 @@ describe('Ride Flow Integration Tests', () => {
     });
 
     it('should handle ride cancellation flow', async () => {
+      // Ensure driver is online and available
+      driver.driverProfile.isOnline = true;
+      driver.driverProfile.isAvailable = true;
+      await driver.save();
+
+      // Also set driver online via API to ensure consistency
+      await request(app)
+        .put('/api/drivers/status')
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({ status: 'online' })
+        .expect(200);
+
       // Step 1: Passenger requests a ride
       const rideRequestData = {
         pickupLocation: {
@@ -176,6 +206,18 @@ describe('Ride Flow Integration Tests', () => {
     });
 
     it('should handle driver cancellation flow', async () => {
+      // Ensure driver is online and available
+      driver.driverProfile.isOnline = true;
+      driver.driverProfile.isAvailable = true;
+      await driver.save();
+
+      // Also set driver online via API to ensure consistency
+      await request(app)
+        .put('/api/drivers/status')
+        .set('Authorization', `Bearer ${driverToken}`)
+        .send({ status: 'online' })
+        .expect(200);
+
       // Step 1: Passenger requests a ride
       const rideRequestData = {
         pickupLocation: {

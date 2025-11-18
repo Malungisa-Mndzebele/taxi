@@ -61,7 +61,7 @@ jest.mock('react-native-vector-icons/MaterialIcons', () => 'Icon');
 
 jest.mock('react-native-paper', () => {
   const React = require('react');
-  const { View, Text, TouchableOpacity } = require('react-native');
+  const { View, Text, TouchableOpacity, TextInput } = require('react-native');
   
   return {
     Provider: ({ children }) => children,

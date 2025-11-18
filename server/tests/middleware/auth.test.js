@@ -15,12 +15,13 @@ const mockResponse = () => {
   return res;
 };
 
-const mockNext = jest.fn();
 
 describe('Auth Middleware', () => {
   let user;
+  let mockNext;
 
   beforeEach(async () => {
+    mockNext = jest.fn();
     user = new User({
       firstName: 'John',
       lastName: 'Doe',
@@ -64,6 +65,7 @@ describe('Auth Middleware', () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ 
         message: 'Token is not valid',
+        code: 'AUTH_INVALID',
         error: expect.any(String)
       }));
       expect(mockNext).not.toHaveBeenCalled();
@@ -83,6 +85,7 @@ describe('Auth Middleware', () => {
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ 
         message: 'Token is not valid',
+        code: 'AUTH_EXPIRED',
         error: expect.any(String)
       }));
       expect(mockNext).not.toHaveBeenCalled();
@@ -118,40 +121,40 @@ describe('Auth Middleware', () => {
   });
 
   describe('requireRole middleware', () => {
-    it('should allow access for authorized role', () => {
+    it('should allow access for authorized role', async () => {
       const req = { user: { role: 'passenger' } };
       const res = mockResponse();
 
-      requireRole(['passenger'])(req, res, mockNext);
+      await requireRole(['passenger'])(req, res, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
     });
 
-    it('should allow access for multiple authorized roles', () => {
+    it('should allow access for multiple authorized roles', async () => {
       const req = { user: { role: 'driver' } };
       const res = mockResponse();
 
-      requireRole(['passenger', 'driver'])(req, res, mockNext);
+      await requireRole(['passenger', 'driver'])(req, res, mockNext);
 
       expect(mockNext).toHaveBeenCalled();
     });
 
-    it('should deny access for unauthorized role', () => {
+    it('should deny access for unauthorized role', async () => {
       const req = { user: { role: 'passenger' } };
       const res = mockResponse();
 
-      requireRole(['driver'])(req, res, mockNext);
+      await requireRole(['driver'])(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({ message: 'Insufficient permissions' });
       expect(mockNext).not.toHaveBeenCalled();
     });
 
-    it('should deny access when no user is authenticated', () => {
+    it('should deny access when no user is authenticated', async () => {
       const req = {};
       const res = mockResponse();
 
-      requireRole(['passenger'])(req, res, mockNext);
+      await requireRole(['passenger'])(req, res, mockNext);
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith({ message: 'Authentication required' });

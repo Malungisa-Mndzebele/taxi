@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { auth, requireRole } = require('../middleware/auth');
 const User = require('../models/User');
 const Ride = require('../models/Ride');
+const logger = require('../utils/logger');
 const router = express.Router();
 
 // @route   GET /api/drivers/status
@@ -21,7 +22,7 @@ router.get('/status', [auth, requireRole(['driver'])], async (req, res) => {
       isAvailable: driver.driverProfile?.isAvailable || false
     });
   } catch (error) {
-    console.error('Get driver status error:', error);
+    logger.error('Get driver status error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -32,7 +33,9 @@ router.get('/status', [auth, requireRole(['driver'])], async (req, res) => {
 router.put('/status', [
   auth,
   requireRole(['driver']),
-  body('status').isIn(['online', 'offline']).withMessage('Status must be online or offline')
+  body('status').optional().isIn(['online', 'offline']).withMessage('Status must be online or offline'),
+  body('isOnline').optional().isBoolean().withMessage('isOnline must be a boolean'),
+  body('isAvailable').optional().isBoolean().withMessage('isAvailable must be a boolean')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -40,30 +43,116 @@ router.put('/status', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { status } = req.body;
-
-    const driver = await User.findByIdAndUpdate(
-      req.user.id,
-      { 
-        driverStatus: status,
-        'driverProfile.isOnline': status === 'online',
-        'driverProfile.isAvailable': status === 'online'
-      },
-      { new: true }
-    );
-
+    const { status, isOnline, isAvailable } = req.body;
+    
+    // Require at least one field
+    if (status === undefined && isOnline === undefined && isAvailable === undefined) {
+      return res.status(400).json({ message: 'At least one field (status, isOnline, or isAvailable) is required' });
+    }
+    
+    // Get the driver first
+    let driver = await User.findById(req.user.id);
     if (!driver) {
       return res.status(404).json({ message: 'Driver not found' });
     }
+    
+    // Ensure driverProfile exists - initialize if needed
+    if (!driver.driverProfile) {
+      driver.driverProfile = {
+        isOnline: false,
+        isAvailable: false,
+        rating: 5.0,
+        totalRides: 0
+      };
+      driver.markModified('driverProfile');
+      await driver.save();
+      // Reload to get the saved state
+      driver = await User.findById(req.user.id);
+    }
+    
+    // Support both formats: { status: 'online' } or { isOnline: true, isAvailable: true }
+    if (status !== undefined) {
+      // Old format: { status: 'online' | 'offline' }
+      driver.driverStatus = status;
+      driver.driverProfile.isOnline = status === 'online';
+      driver.driverProfile.isAvailable = status === 'online';
+    } else {
+      // New format: { isOnline: true/false, isAvailable: true/false }
+      if (isOnline !== undefined) {
+        driver.driverProfile.isOnline = isOnline;
+        driver.driverStatus = isOnline ? 'online' : 'offline';
+        // If going offline, also set isAvailable to false
+        if (!isOnline) {
+          driver.driverProfile.isAvailable = false;
+        }
+      }
+      if (isAvailable !== undefined) {
+        driver.driverProfile.isAvailable = isAvailable;
+      }
+    }
+    
+    // Mark driverProfile as modified and save
+    driver.markModified('driverProfile');
+    await driver.save();
+    
+    // Always use $set to ensure the values are properly saved to the database
+    // This is more reliable than relying on markModified + save for nested objects
+    const updateData = {};
+    if (status !== undefined) {
+      updateData.driverStatus = status;
+      updateData['driverProfile.isOnline'] = status === 'online';
+      updateData['driverProfile.isAvailable'] = status === 'online';
+    } else {
+      if (isOnline !== undefined) {
+        updateData['driverProfile.isOnline'] = isOnline;
+        updateData.driverStatus = isOnline ? 'online' : 'offline';
+        if (!isOnline) {
+          updateData['driverProfile.isAvailable'] = false;
+        }
+      }
+      if (isAvailable !== undefined) {
+        updateData['driverProfile.isAvailable'] = isAvailable;
+      }
+    }
+    
+    // Use $set to ensure nested object is properly saved
+    await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateData },
+      { new: true }
+    );
+    
+    // Reload to get the final state
+    const finalDriver = await User.findById(req.user.id);
+    if (!finalDriver) {
+      return res.status(404).json({ message: 'Driver not found' });
+    }
 
-    res.json({ 
-      message: `Driver status updated to ${status}`,
-      status: driver.driverStatus,
-      isOnline: driver.driverProfile?.isOnline,
-      isAvailable: driver.driverProfile?.isAvailable
-    });
+    // Return format based on input format
+    if (status !== undefined) {
+      // Old format: return status as string and driver object for backward compatibility
+      res.json({ 
+        message: `Driver status updated successfully to ${finalDriver.driverStatus}`,
+        status: finalDriver.driverStatus,
+        driver: {
+          status: finalDriver.driverStatus,
+          isOnline: finalDriver.driverProfile?.isOnline || false,
+          isAvailable: finalDriver.driverProfile?.isAvailable || false
+        }
+      });
+    } else {
+      // New format: return status object
+      res.json({ 
+        message: 'Driver status updated successfully',
+        status: {
+          driverStatus: finalDriver.driverStatus,
+          isOnline: finalDriver.driverProfile?.isOnline || false,
+          isAvailable: finalDriver.driverProfile?.isAvailable || false
+        }
+      });
+    }
   } catch (error) {
-    console.error('Update driver status error:', error);
+    logger.error('Update driver status error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -113,7 +202,7 @@ router.put('/location', [
       location: driver.currentLocation
     });
   } catch (error) {
-    console.error('Update driver location error:', error);
+    logger.error('Update driver location error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -167,7 +256,7 @@ router.get('/available', auth, async (req, res) => {
       }))
     });
   } catch (error) {
-    console.error('Get available drivers error:', error);
+    logger.error('Get available drivers error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -203,7 +292,7 @@ router.get('/rides', [auth, requireRole(['driver'])], async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get driver rides error:', error);
+    logger.error('Get driver rides error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -240,7 +329,7 @@ router.get('/earnings', [auth, requireRole(['driver'])], async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get driver earnings error:', error);
+    logger.error('Get driver earnings error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -297,7 +386,7 @@ router.put('/profile', [
       }
     });
   } catch (error) {
-    console.error('Update driver profile error:', error);
+    logger.error('Update driver profile error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
