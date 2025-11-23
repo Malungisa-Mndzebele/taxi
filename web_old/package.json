@@ -1,0 +1,33 @@
+{
+  "name": "taxi-app-web-tests",
+  "version": "1.0.0",
+  "description": "Web interface tests for Taxi App",
+  "main": "index.html",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "jsdom": "^22.1.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ],
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "index.html",
+      "!node_modules/**"
+    ]
+  },
+  "dependencies": {
+    "axios": "^1.12.2"
+  }
+}

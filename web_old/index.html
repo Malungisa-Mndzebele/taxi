@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxi App - Web Version</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Ride-sharing app like Uber - Request and accept rides">
+    <meta name="theme-color" content="#007bff">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Taxi App">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .ride-card {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .btn-primary { background: #007bff; }
+        .btn-primary:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🚗 Taxi App - Web Version</h1>
+    
+    <!-- Auth Forms (shown initially) -->
+    <div id="auth-forms">
+        <div class="card">
+            <h2>🔐 Authentication</h2>
+            <input type="text" id="firstName" placeholder="First Name">
+            <input type="text" id="lastName" placeholder="Last Name">
+            <input type="email" id="email" placeholder="Email">
+            <input type="tel" id="phone" placeholder="Phone">
+            <input type="password" id="password" placeholder="Password">
+            <select id="role">
+                <option value="passenger">Passenger</option>
+                <option value="driver">Driver</option>
+            </select>
+            <button class="btn" onclick="register()">Register</button>
+            <button class="btn" onclick="login()">Login</button>
+            <div id="auth-status"></div>
+        </div>
+        
+        <div class="card">
+            <h2>🔧 API Status</h2>
+            <button class="btn" onclick="checkHealth()">Check Backend</button>
+            <div id="api-status"></div>
+        </div>
+    </div>
+
+    <!-- User Interface (shown after login) -->
+    <div id="user-interface" style="display: none;">
+        <div class="container">
+            <div id="user-info"></div>
+            
+            <!-- Driver Interface -->
+            <div id="driver-interface" style="display: none;">
+                <h2>Driver Dashboard</h2>
+                <div id="available-rides">
+                    <h3>Available Rides</h3>
+                    <button onclick="loadAvailableRides()" class="btn btn-secondary">Refresh Rides</button>
+                    <p>Loading available rides...</p>
+                </div>
+                <div id="ride-status"></div>
+            </div>
+            
+            <!-- Passenger Interface -->
+            <div id="passenger-interface" style="display: none;">
+                <h2>Passenger Dashboard</h2>
+                <div class="form-group">
+                    <label for="pickupLocation">Pickup Location:</label>
+                    <input type="text" id="pickupLocation" placeholder="Enter pickup address">
+                </div>
+                <div class="form-group">
+                    <label for="dropoffLocation">Dropoff Location:</label>
+                    <input type="text" id="dropoffLocation" placeholder="Enter dropoff address">
+                </div>
+                <button onclick="requestRide()" class="btn btn-primary">Request Ride</button>
+                <div id="ride-status"></div>
+                
+                <h3>Active Rides</h3>
+                <div id="active-rides">
+                    <p>Loading active rides...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-detect API URL based on environment
+        // Production: Use relative path or configure backend URL
+        // Local: Use localhost or local IP
+        // TODO: Replace 'yourdomain.com' with your actual production domain
+        const isProduction = window.location.hostname !== 'localhost' && 
+                             !window.location.hostname.startsWith('127.0.0.1') &&
+                             !window.location.hostname.startsWith('192.168.');
+        const API_BASE = isProduction 
+            ? `${window.location.protocol}//${window.location.hostname}/api`  // Use same domain as frontend
+            : 'http://localhost:5000/api';      // Local development
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                document.getElementById('api-status').innerHTML = 
+                    `<div class="status success">✅ Backend is healthy! Status: ${data.status}</div>`;
+            } catch (error) {
+                document.getElementById('api-status').innerHTML = 
+                    `<div class="status error">❌ Backend connection failed: ${error.message}</div>`;
+            }
+        }
+
+        async function register() {
+            const userData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value,
+                role: document.getElementById('role').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('auth-status').innerHTML = 
+                        `<div class="status success">✅ Registration successful! Welcome ${userData.firstName}!</div>`;
+                } else {
+                    document.getElementById('auth-status').innerHTML = 
+                        `<div class="status error">❌ Registration failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('auth-status').innerHTML = 
+                    `<div class="status error">❌ Registration error: ${error.message}</div>`;
+            }
+        }
+
+        async function login() {
+            const loginData = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(loginData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    currentUser = data.user;
+                    localStorage.setItem('authToken', authToken);
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // Clear form
+                    document.getElementById('email').value = '';
+                    document.getElementById('password').value = '';
+                    
+                    document.getElementById('auth-status').innerHTML = 
+                        `<div class="status success">✅ Login successful! Welcome ${data.user.firstName}!</div>`;
+                    
+                    // Show appropriate interface based on user role
+                    showUserInterface(data.user);
+                } else {
+                    document.getElementById('auth-status').innerHTML = 
+                        `<div class="status error">❌ Login failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('auth-status').innerHTML = 
+                    `<div class="status error">❌ Login error: ${error.message}</div>`;
+            }
+        }
+
+        async function requestRide() {
+            if (!authToken) {
+                document.getElementById('ride-status').innerHTML = 
+                    `<div class="status error">❌ Please login first to request a ride</div>`;
+                return;
+            }
+
+            const rideData = {
+                pickupLocation: document.getElementById('pickupLocation').value,
+                dropoffLocation: document.getElementById('dropoffLocation').value,
+                pickupLat: 40.7128,
+                pickupLng: -74.0060,
+                dropoffLat: 40.7589,
+                dropoffLng: -73.9851
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/rides/request`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(rideData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('ride-status').innerHTML = 
+                        `<div class="status success">✅ Ride requested successfully! Ride ID: ${data.ride._id}</div>`;
+                } else {
+                    document.getElementById('ride-status').innerHTML = 
+                        `<div class="status error">❌ Ride request failed: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('ride-status').innerHTML = 
+                    `<div class="status error">❌ Ride request error: ${error.message}</div>`;
+            }
+        }
+
+        function showUserInterface(user) {
+            // Hide login/register forms
+            document.getElementById('auth-forms').style.display = 'none';
+            
+            // Show user interface
+            document.getElementById('user-interface').style.display = 'block';
+            
+            // Update user info
+            document.getElementById('user-info').innerHTML = `
+                <h3>Welcome, ${user.firstName} ${user.lastName}!</h3>
+                <p><strong>Role:</strong> ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}</p>
+                <p><strong>Email:</strong> ${user.email}</p>
+                <button onclick="logout()" class="btn btn-secondary">Logout</button>
+            `;
+            
+            // Show appropriate interface based on role
+            if (user.role === 'driver') {
+                showDriverInterface();
+            } else {
+                showPassengerInterface();
+            }
+        }
+
+        function showDriverInterface() {
+            document.getElementById('passenger-interface').style.display = 'none';
+            document.getElementById('driver-interface').style.display = 'block';
+            
+            // Set driver as online and load available rides
+            setDriverOnline();
+        }
+
+        function showPassengerInterface() {
+            document.getElementById('driver-interface').style.display = 'none';
+            document.getElementById('passenger-interface').style.display = 'block';
+            
+            // Load active rides for passenger
+            getActiveRides();
+        }
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            
+            // Show login/register forms
+            document.getElementById('auth-forms').style.display = 'block';
+            document.getElementById('user-interface').style.display = 'none';
+            
+            // Clear status messages
+            document.getElementById('auth-status').innerHTML = '';
+            document.getElementById('ride-status').innerHTML = '';
+            document.getElementById('active-rides').innerHTML = '';
+        }
+
+        async function setDriverOnline() {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/drivers/status`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ isOnline: true })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    console.log('Driver set as online');
+                    // Load available rides after setting online
+                    loadAvailableRides();
+                } else {
+                    console.log('Failed to set driver online:', data.message);
+                    // Still try to load available rides
+                    loadAvailableRides();
+                }
+            } catch (error) {
+                console.log('Error setting driver online:', error.message);
+                // Still try to load available rides
+                loadAvailableRides();
+            }
+        }
+
+        async function loadAvailableRides() {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/rides/available`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const ridesHtml = data.rides.length > 0 
+                        ? data.rides.map(ride => `
+                            <div class="ride-card">
+                                <h4>Ride Request</h4>
+                                <p><strong>From:</strong> ${ride.pickupLocation?.address || 'Pickup Location'}</p>
+                                <p><strong>To:</strong> ${ride.dropoffLocation?.address || 'Dropoff Location'}</p>
+                                <p><strong>Fare:</strong> $${ride.fare?.totalFare || 'TBD'}</p>
+                                <p><strong>Status:</strong> ${ride.status}</p>
+                                <p><strong>Passenger:</strong> ${ride.passenger?.firstName} ${ride.passenger?.lastName}</p>
+                                <button onclick="acceptRide('${ride._id}')" class="btn btn-primary">Accept Ride</button>
+                            </div>
+                        `).join('')
+                        : '<p>No available rides at the moment.</p>';
+                    
+                    document.getElementById('available-rides').innerHTML = ridesHtml;
+                } else {
+                    document.getElementById('available-rides').innerHTML = 
+                        `<div class="status error">❌ Failed to load available rides: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('available-rides').innerHTML = 
+                    `<div class="status error">❌ Error loading available rides: ${error.message}</div>`;
+            }
+        }
+
+        async function acceptRide(rideId) {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/rides/${rideId}/accept`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('ride-status').innerHTML = 
+                        `<div class="status success">✅ Ride accepted successfully!</div>`;
+                    // Reload available rides
+                    loadAvailableRides();
+                } else {
+                    document.getElementById('ride-status').innerHTML = 
+                        `<div class="status error">❌ Failed to accept ride: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('ride-status').innerHTML = 
+                    `<div class="status error">❌ Error accepting ride: ${error.message}</div>`;
+            }
+        }
+
+        async function getActiveRides() {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/rides/active`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const ridesHtml = data.rides.length > 0 
+                        ? data.rides.map(ride => `
+                            <div class="ride-card">
+                                <h4>Active Ride</h4>
+                                <p><strong>From:</strong> ${ride.pickupLocation?.address || 'Pickup Location'}</p>
+                                <p><strong>To:</strong> ${ride.dropoffLocation?.address || 'Dropoff Location'}</p>
+                                <p><strong>Status:</strong> ${ride.status}</p>
+                                <p><strong>Driver:</strong> ${ride.driver ? ride.driver.firstName + ' ' + ride.driver.lastName : 'Not assigned'}</p>
+                            </div>
+                        `).join('')
+                        : '<p>No active rides.</p>';
+                    
+                    document.getElementById('active-rides').innerHTML = ridesHtml;
+                } else {
+                    document.getElementById('active-rides').innerHTML = 
+                        `<div class="status error">❌ Failed to load active rides: ${data.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('active-rides').innerHTML = 
+                    `<div class="status error">❌ Error loading active rides: ${error.message}</div>`;
+            }
+        }
+
+        // PWA Install functionality
+        let deferredPrompt;
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+        
+        // Handle PWA install prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button
+            const installBtn = document.createElement('button');
+            installBtn.innerHTML = '📱 Install App';
+            installBtn.className = 'btn btn-primary';
+            installBtn.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 1000; background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;';
+            installBtn.onclick = () => {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            };
+            document.body.appendChild(installBtn);
+        });
+        
+        // Check backend health on page load and show interface if already logged in
+        window.onload = () => {
+            checkHealth();
+            if (authToken && currentUser) {
+                showUserInterface(currentUser);
+            }
+        };
+    </script>
+</body>
+</html>

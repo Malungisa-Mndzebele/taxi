@@ -11,8 +11,30 @@ env:
   MONGODB_VERSION: '7'
 
 jobs:
+  frontend-check:
+    name: Frontend Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./web
+        run: npm ci
+      
+      - name: Build frontend
+        working-directory: ./web
+        run: npm run build
+
   test:
-    name: Run Tests
+    name: Run Backend Tests
     runs-on: ubuntu-latest
     
     services:
@@ -170,7 +192,7 @@ jobs:
   deploy-staging:
     name: Deploy to Fly.io Staging
     runs-on: ubuntu-latest
-    needs: [test, performance, security]
+    needs: [test, performance, security, frontend-check]
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     
     steps:
@@ -196,7 +218,7 @@ jobs:
   deploy-production:
     name: Deploy to Fly.io Production
     runs-on: ubuntu-latest
-    needs: [test, performance, security]
+    needs: [test, performance, security, frontend-check]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:

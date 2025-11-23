@@ -224,8 +224,8 @@ router.get('/:rideId', auth, async (req, res) => {
     }
 
     // Check if user is either the passenger or driver
-    if (ride.passenger._id.toString() !== req.user.id && 
-        (!ride.driver || ride.driver._id.toString() !== req.user.id)) {
+    if (ride.passenger._id.toString() !== req.user.id &&
+      (!ride.driver || ride.driver._id.toString() !== req.user.id)) {
       return res.status(403).json({ message: 'Not authorized to view this ride' });
     }
 
@@ -245,7 +245,7 @@ const acceptRideHandler = async (req, res) => {
     if (!req.params.rideId || req.params.rideId === 'undefined') {
       return res.status(400).json({ message: 'Invalid ride ID' });
     }
-    
+
     const ride = await Ride.findById(req.params.rideId)
       .populate('passenger', 'firstName lastName phone')
       .exec();
@@ -259,81 +259,53 @@ const acceptRideHandler = async (req, res) => {
     }
 
     // Check if driver is online and available
-    // Use raw data as the source of truth (actual database state)
-    const rawDriver = await User.findById(req.user.id).lean();
-    if (!rawDriver || rawDriver.role !== 'driver') {
-      return res.status(403).json({ message: 'Only drivers can accept rides' });
-    }
-    
-    // Load as Mongoose document for later operations
     let driver = await User.findById(req.user.id);
     if (!driver || driver.role !== 'driver') {
       return res.status(403).json({ message: 'Only drivers can accept rides' });
     }
-    
-    // Use raw data as the source of truth - it's the actual database state
-    const driverProfile = rawDriver.driverProfile;
-    
+
+    const driverProfile = driver.driverProfile;
+
     if (!driverProfile) {
       // Initialize driverProfile if it doesn't exist
-      await User.findByIdAndUpdate(
-        req.user.id,
-        {
-          $set: {
-            'driverProfile.isOnline': false,
-            'driverProfile.isAvailable': false,
-            'driverProfile.rating': 5.0,
-            'driverProfile.totalRides': 0
-          }
-        },
-        { new: true }
-      );
-      return res.status(400).json({ 
+      driver.driverProfile = {
+        isOnline: false,
+        isAvailable: false,
+        rating: 5.0,
+        totalRides: 0
+      };
+      await driver.save();
+
+      return res.status(400).json({
         message: 'Driver profile not initialized. Please set driver status first.'
       });
     }
-    
-    // Check if driver is online - use raw data (database state)
+
+    // Check if driver is online
     const isOnline = driverProfile.isOnline === true;
     if (!isOnline) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Driver must be online to accept rides',
-        debug: { 
+        debug: {
           isOnline: driverProfile.isOnline,
-          driverStatus: rawDriver.driverStatus,
-          driverProfile: driverProfile
+          driverStatus: driver.driverStatus
         }
       });
     }
-    
-    // Check if driver is available - use raw data (database state)
+
+    // Check if driver is available
     const isAvailable = driverProfile.isAvailable === true;
     if (!isAvailable) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Driver is not available',
-        debug: { 
+        debug: {
           isAvailable: driverProfile.isAvailable,
-          isOnline: driverProfile.isOnline,
-          driverProfile: driverProfile
+          isOnline: driverProfile.isOnline
         }
       });
     }
-    
-    // Sync to Mongoose document for later operations
-    if (!driver.driverProfile) {
-      driver.driverProfile = {
-        isOnline: driverProfile.isOnline || false,
-        isAvailable: driverProfile.isAvailable || false,
-        rating: driverProfile.rating || 5.0,
-        totalRides: driverProfile.totalRides || 0,
-        licenseNumber: driverProfile.licenseNumber,
-        vehicleInfo: driverProfile.vehicleInfo
-      };
-      driver.markModified('driverProfile');
-      await driver.save();
-      // Reload driver after sync
-      driver = await User.findById(req.user.id);
-    }
+
+
 
     ride.driver = req.user.id;
     ride.status = 'accepted';
@@ -380,7 +352,7 @@ router.post('/:rideId/accept', [auth, requireRole(['driver'])], acceptRideHandle
 router.post('/:rideId/arrive', [auth, requireRole(['driver'])], async (req, res) => {
   try {
     const ride = await Ride.findById(req.params.rideId);
-    
+
     if (!ride) {
       return res.status(404).json({ message: 'Ride not found' });
     }
@@ -601,7 +573,7 @@ router.put('/:rideId/status', [auth, requireRole(['driver']), body('status').not
     }
 
     ride.status = mappedStatus;
-    
+
     // Update timeline
     if (mappedStatus === 'started' && !ride.timeline.startedAt) {
       ride.timeline.startedAt = new Date();

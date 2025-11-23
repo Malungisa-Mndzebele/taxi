@@ -240,7 +240,7 @@ describe('Complete Taxi App Flow Tests', () => {
       expect(response.body.ride.dropoffLocation).toBeDefined();
       expect(response.body.ride.status).toBe('requested');
 
-      rideId = response.body.ride._id;
+      rideId = response.body.ride.id;
     });
 
     test('Should reject ride request without authentication', async () => {
@@ -309,7 +309,7 @@ describe('Complete Taxi App Flow Tests', () => {
         .set('Authorization', `Bearer ${passengerToken}`)
         .send(rideData)
         .expect(201);
-      rideId = rideResponse.body.ride._id;
+      rideId = rideResponse.body.ride.id;
 
       // Now ensure driver is online
       await request(app)
@@ -326,7 +326,7 @@ describe('Complete Taxi App Flow Tests', () => {
       expect(response.body.rides).toBeDefined();
       expect(Array.isArray(response.body.rides)).toBe(true);
       expect(response.body.rides.length).toBeGreaterThanOrEqual(0);
-      
+
       // Check if our created ride is in the list (if any rides exist)
       if (response.body.rides.length > 0) {
         const ourRide = response.body.rides.find(ride => ride._id === rideId);
@@ -386,7 +386,7 @@ describe('Complete Taxi App Flow Tests', () => {
         .set('Authorization', `Bearer ${passengerToken}`)
         .send(rideData)
         .expect(201);
-      rideId = rideResponse.body.ride._id;
+      rideId = rideResponse.body.ride.id;
 
       // Now ensure driver is online and available
       await request(app)
@@ -402,7 +402,7 @@ describe('Complete Taxi App Flow Tests', () => {
 
       expect(response.body.message).toBe('Ride accepted successfully');
       expect(response.body.ride).toBeDefined();
-      expect(response.body.ride.driver).toBe(driverId);
+      expect(response.body.ride.driver._id).toBe(driverId);
       expect(response.body.ride.status).toBe('accepted');
     });
 
@@ -456,7 +456,7 @@ describe('Complete Taxi App Flow Tests', () => {
         .set('Authorization', `Bearer ${passengerToken}`)
         .send(rideData)
         .expect(201);
-      rideId = rideResponse.body.ride._id;
+      rideId = rideResponse.body.ride.id;
 
       // Set driver online and accept ride
       await request(app)
@@ -530,7 +530,7 @@ describe('Complete Taxi App Flow Tests', () => {
         .set('Authorization', `Bearer ${passengerToken}`)
         .send(rideData)
         .expect(201);
-      rideId = rideResponse.body.ride._id;
+      rideId = rideResponse.body.ride.id;
 
       // Set driver online and accept ride
       await request(app)
@@ -541,6 +541,11 @@ describe('Complete Taxi App Flow Tests', () => {
       await request(app)
         .put(`/api/rides/${rideId}/accept`)
         .set('Authorization', `Bearer ${driverToken}`)
+        .expect(res => {
+          if (res.status !== 200) {
+            console.log('Accept failed:', JSON.stringify(res.body, null, 2));
+          }
+        })
         .expect(200);
 
       // Now complete the ride
@@ -692,7 +697,7 @@ describe('Complete Taxi App Flow Tests', () => {
         .expect(200);
 
       const invalidRideId = '507f1f77bcf86cd799439011';
-      
+
       const response = await request(app)
         .put(`/api/rides/${invalidRideId}/accept`)
         .set('Authorization', `Bearer ${driverToken}`)

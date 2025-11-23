@@ -37,7 +37,7 @@ const apiLimiter = rateLimit({
 });
 
 // CORS configuration
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
   : ['http://localhost:3000', 'http://localhost:19006', 'http://localhost:8080'];
 
@@ -78,8 +78,8 @@ app.get('/api-docs.json', (req, res) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: 'Taxi App API is running',
     timestamp: new Date().toISOString()
   });
@@ -91,8 +91,15 @@ app.use('/api/rides', rideRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/users', userRoutes);
 
-// Root endpoint
-app.get('/', (req, res) => {
+// Serve static files from the React app
+const path = require('path');
+// Check if we are in production or if the web build exists
+// We assume the build is in ../web/dist relative to server/index.js or ./public if copied
+const webBuildPath = process.env.WEB_BUILD_PATH || path.join(__dirname, '../web/dist');
+app.use(express.static(webBuildPath));
+
+// Root endpoint - API Info (only if not requesting HTML)
+app.get('/api', (req, res) => {
   res.json({
     message: '🚗 Taxi App API',
     version: '1.0.0',
@@ -103,6 +110,21 @@ app.get('/', (req, res) => {
       rides: '/api/rides',
       drivers: '/api/drivers',
       users: '/api/users'
+    }
+  });
+});
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res, next) => {
+  // If request is for API, don't serve HTML, pass to 404 handler
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(webBuildPath, 'index.html'), (err) => {
+    if (err) {
+      // If index.html is missing (e.g. during dev without build), pass to next (404)
+      next();
     }
   });
 });
@@ -124,13 +146,13 @@ if (process.env.MONGODB_URI || process.env.NODE_ENV === 'production') {
     useNewUrlParser: true,
     useUnifiedTopology: true
   })
-  .then(() => {
-    console.log('✅ MongoDB connected successfully');
-  })
-  .catch((err) => {
-    console.log('⚠️  MongoDB connection failed:', err.message);
-    console.log('📝 Server will run without database (API endpoints may have limited functionality)');
-  });
+    .then(() => {
+      console.log('✅ MongoDB connected successfully');
+    })
+    .catch((err) => {
+      console.log('⚠️  MongoDB connection failed:', err.message);
+      console.log('📝 Server will run without database (API endpoints may have limited functionality)');
+    });
 } else {
   console.log('📝 Running without MongoDB (set MONGODB_URI in .env to enable database)');
 }
