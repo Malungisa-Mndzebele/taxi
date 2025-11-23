@@ -39,7 +39,7 @@ jobs:
     
     services:
       mongodb:
-        image: mongo:${{ env.MONGODB_VERSION }}
+        image: mongo:4.4
         ports:
           - 27017:27017
         options: >-
@@ -124,7 +124,7 @@ jobs:
     
     services:
       mongodb:
-        image: mongo:${{ env.MONGODB_VERSION }}
+        image: mongo:4.4
         ports:
           - 27017:27017
     
@@ -158,7 +158,7 @@ jobs:
     
     services:
       mongodb:
-        image: mongo:${{ env.MONGODB_VERSION }}
+        image: mongo:4.4
         ports:
           - 27017:27017
     
