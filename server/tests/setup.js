@@ -2,8 +2,14 @@ const mongoose = require('mongoose');
 const { setupTestEnvironment, teardownTestEnvironment } = require('./test-helper');
 const { Server } = require('socket.io');
 
-// Clear database before each test
+// Clear database before each test (except E2E tests which manage their own state)
 beforeEach(async () => {
+  // Skip clearing for E2E tests - they manage their own state
+  const testPath = expect.getState().testPath || '';
+  if (testPath.includes('/e2e/')) {
+    return;
+  }
+  
   // Drop all collections
   const collections = mongoose.connection.collections;
   for (const key in collections) {
