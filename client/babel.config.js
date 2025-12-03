@@ -3,9 +3,7 @@ module.exports = function (api) {
   return {
     presets: ['module:metro-react-native-babel-preset'],
     plugins: [
-      'react-native-web',
       '@babel/plugin-proposal-export-namespace-from',
-      'react-native-reanimated/plugin',
       [
         'module:react-native-dotenv',
         {
@@ -21,6 +19,12 @@ module.exports = function (api) {
     env: {
       production: {
         plugins: ['react-native-paper/babel'],
+      },
+      test: {
+        presets: [
+          ['@babel/preset-env', { targets: { node: 'current' } }],
+          '@babel/preset-react',
+        ],
       },
     },
   };

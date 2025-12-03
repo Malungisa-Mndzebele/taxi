@@ -38,7 +38,10 @@ export const rides = {
 };
 
 export const drivers = {
-  setStatus: (isOnline) => api.put('/drivers/status', { isOnline }),
+  setStatus: (isOnline) => api.put('/drivers/status', { 
+    isOnline, 
+    isAvailable: isOnline // When going online, also become available
+  }),
 };
 
 export const health = {

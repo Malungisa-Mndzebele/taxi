@@ -16,14 +16,19 @@ const PassengerDashboard = () => {
         setSuccess('');
 
         try {
-            // Mock coordinates for now as the backend expects them
+            // Format data according to backend API requirements
             const rideData = {
-                pickupLocation: pickup,
-                dropoffLocation: dropoff,
-                pickupLat: 40.7128,
-                pickupLng: -74.0060,
-                dropoffLat: 40.7589,
-                dropoffLng: -73.9851
+                pickupLocation: {
+                    coordinates: [-74.0060, 40.7128], // [longitude, latitude]
+                    address: pickup
+                },
+                dropoffLocation: {
+                    coordinates: [-73.9851, 40.7589], // [longitude, latitude]
+                    address: dropoff
+                },
+                distance: 5.2, // Mock distance in km
+                estimatedDuration: 15, // Mock duration in minutes
+                paymentMethod: 'cash'
             };
 
             await rides.request(rideData);

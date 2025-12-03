@@ -9,7 +9,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
 
 // Load environment variables
-dotenv.config({ path: './config.env' });
+dotenv.config();
 
 // Import routes
 const authRoutes = require('./routes/auth');

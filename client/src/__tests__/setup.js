@@ -1,4 +1,4 @@
-import '@testing-library/jest-native/extend-expect';
+require('@testing-library/jest-native/extend-expect');
 
 // Mock react-native modules
 jest.mock('react-native-maps', () => {
@@ -65,22 +65,46 @@ jest.mock('react-native-paper', () => {
   
   return {
     Provider: ({ children }) => children,
-    TextInput: React.forwardRef((props, ref) => React.createElement(TextInput, { ...props, ref })),
-    Button: (props) => React.createElement(TouchableOpacity, props),
-    Card: ({ children, ...props }) => React.createElement(View, props, children),
-    Title: (props) => React.createElement(Text, { ...props, style: [{ fontSize: 20, fontWeight: 'bold' }, props.style] }),
-    Paragraph: (props) => React.createElement(Text, props),
+    TextInput: React.forwardRef((props, ref) => 
+      React.createElement(TextInput, { 
+        ...props, 
+        ref,
+        placeholder: props.placeholder || props.label,
+        testID: props.testID || props.label
+      })
+    ),
+    Button: (props) => 
+      React.createElement(
+        TouchableOpacity, 
+        { 
+          ...props, 
+          accessible: true, 
+          accessibilityState: { disabled: props.disabled || false },
+          testID: props.testID
+        }, 
+        React.createElement(Text, {}, props.children)
+      ),
+    Card: Object.assign(
+      ({ children, ...props }) => React.createElement(View, props, children),
+      {
+        Content: ({ children, ...props }) => React.createElement(View, props, children),
+        Title: (props) => React.createElement(Text, props, props.children),
+        Actions: ({ children, ...props }) => React.createElement(View, props, children),
+      }
+    ),
+    Title: (props) => React.createElement(Text, { ...props, style: [{ fontSize: 20, fontWeight: 'bold' }, props.style] }, props.children),
+    Paragraph: (props) => React.createElement(Text, props, props.children),
     ActivityIndicator: (props) => React.createElement(View, props),
-    FAB: (props) => React.createElement(TouchableOpacity, props),
+    FAB: (props) => React.createElement(TouchableOpacity, props, React.createElement(Text, {}, props.label)),
     Portal: ({ children }) => children,
     Modal: ({ children, visible, ...props }) => visible ? React.createElement(View, props, children) : null,
     List: {
-      Item: (props) => React.createElement(TouchableOpacity, props),
+      Item: (props) => React.createElement(TouchableOpacity, props, React.createElement(Text, {}, props.title)),
       Icon: (props) => React.createElement(View, props),
     },
     Divider: (props) => React.createElement(View, props),
     Switch: (props) => React.createElement(TouchableOpacity, props),
-    Chip: (props) => React.createElement(View, props),
+    Chip: (props) => React.createElement(View, props, React.createElement(Text, {}, props.children)),
   };
 });
 

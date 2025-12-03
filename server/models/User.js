@@ -205,7 +205,9 @@ userSchema.pre('save', async function(next) {
   }
 
   if (user.isModified('password')) {
-    const salt = await bcrypt.genSalt(10);
+    // Use 1 round in test environment for speed, 10 rounds in production
+    const saltRounds = process.env.NODE_ENV === 'test' ? 1 : 10;
+    const salt = await bcrypt.genSalt(saltRounds);
     user.password = await bcrypt.hash(user.password, salt);
   }
 

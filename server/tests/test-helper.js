@@ -18,28 +18,31 @@ async function setupTestEnvironment() {
       return;
     }
     
-    // Use MongoDB service container in CI, in-memory server locally
-    let mongoUri;
-    if (process.env.MONGODB_URI) {
-      // CI environment - use provided MongoDB URI
-      mongoUri = process.env.MONGODB_URI;
-      console.log('🔧 Using MongoDB service container');
-    } else {
-      // Local environment - use in-memory MongoDB
-      if (!mongoServer) {
-        mongoServer = await MongoMemoryServer.create();
-      }
-      mongoUri = mongoServer.getUri();
-      console.log('🔧 Using in-memory MongoDB');
-    }
+    // Use Docker MongoDB (localhost:27017) for all tests
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/taxi-app-test';
+    console.log('🔧 Using Docker MongoDB');
     
-    // Connect to database
+    // Connect to database with retry logic
     if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(mongoUri, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      });
-      console.log('✅ Test database connected');
+      let retries = 5;
+      let connected = false;
+      
+      while (retries > 0 && !connected) {
+        try {
+          await mongoose.connect(mongoUri, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 5000,
+          });
+          connected = true;
+          console.log('✅ Test database connected');
+        } catch (connectError) {
+          retries--;
+          if (retries === 0) throw connectError;
+          console.log(`⏳ Waiting for MongoDB... (${retries} retries left)`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
       
       // Create indexes after connection
       try {
@@ -76,16 +79,7 @@ async function teardownTestEnvironment() {
   try {
     // Close mongoose connection
     if (mongoose.connection.readyState !== 0) {
-      // Only drop database if using in-memory server (not in CI)
-      if (!process.env.MONGODB_URI) {
-        await mongoose.connection.dropDatabase();
-      }
       await mongoose.connection.close();
-    }
-    
-    // Stop in-memory MongoDB server (only exists locally)
-    if (mongoServer) {
-      await mongoServer.stop({ doCleanup: true, force: false });
     }
     
     console.log('✅ Test database disconnected');

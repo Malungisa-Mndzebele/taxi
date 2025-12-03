@@ -10,7 +10,7 @@ const router = express.Router();
 
 // Generate JWT token helper
 const generateToken = (userId, user = null) => {
-  const jwtSecret = process.env.JWT_SECRET || 'test-secret';
+  const jwtSecret = process.env.JWT_SECRET || 'test-secret-key-for-testing';
   // Support both token formats for compatibility
   if (user) {
     return jwt.sign(

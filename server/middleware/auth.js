@@ -10,7 +10,7 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    const jwtSecret = process.env.JWT_SECRET || 'test-secret';
+    const jwtSecret = process.env.JWT_SECRET || 'test-secret-key-for-testing';
     
     const decoded = jwt.verify(token, jwtSecret);
     
