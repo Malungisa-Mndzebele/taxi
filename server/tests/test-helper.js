@@ -4,7 +4,7 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 let mongoServer;
 
 /**
- * Set up test environment with in-memory MongoDB
+ * Set up test environment with in-memory MongoDB or service container
  */
 async function setupTestEnvironment() {
   // Set environment to test
@@ -18,14 +18,22 @@ async function setupTestEnvironment() {
       return;
     }
     
-    // Create in-memory MongoDB instance if not already created
-    if (!mongoServer) {
-      mongoServer = await MongoMemoryServer.create();
+    // Use MongoDB service container in CI, in-memory server locally
+    let mongoUri;
+    if (process.env.MONGODB_URI) {
+      // CI environment - use provided MongoDB URI
+      mongoUri = process.env.MONGODB_URI;
+      console.log('🔧 Using MongoDB service container');
+    } else {
+      // Local environment - use in-memory MongoDB
+      if (!mongoServer) {
+        mongoServer = await MongoMemoryServer.create();
+      }
+      mongoUri = mongoServer.getUri();
+      console.log('🔧 Using in-memory MongoDB');
     }
     
-    const mongoUri = mongoServer.getUri();
-    
-    // Connect to in-memory database
+    // Connect to database
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(mongoUri, {
         useNewUrlParser: true,
@@ -68,11 +76,14 @@ async function teardownTestEnvironment() {
   try {
     // Close mongoose connection
     if (mongoose.connection.readyState !== 0) {
-      await mongoose.connection.dropDatabase();
+      // Only drop database if using in-memory server (not in CI)
+      if (!process.env.MONGODB_URI) {
+        await mongoose.connection.dropDatabase();
+      }
       await mongoose.connection.close();
     }
     
-    // Stop in-memory MongoDB server
+    // Stop in-memory MongoDB server (only exists locally)
     if (mongoServer) {
       await mongoServer.stop({ doCleanup: true, force: false });
     }
