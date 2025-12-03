@@ -16,6 +16,7 @@ const authRoutes = require('./routes/auth');
 const rideRoutes = require('./routes/rides');
 const driverRoutes = require('./routes/drivers');
 const userRoutes = require('./routes/users');
+const messageRoutes = require('./routes/messages');
 
 // Import error handling middleware
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
@@ -90,6 +91,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/rides', rideRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Serve static files from the React app
 const path = require('path');
@@ -109,7 +111,8 @@ app.get('/api', (req, res) => {
       auth: '/api/auth',
       rides: '/api/rides',
       drivers: '/api/drivers',
-      users: '/api/users'
+      users: '/api/users',
+      messages: '/api/messages'
     }
   });
 });
@@ -176,14 +179,72 @@ io.on('connection', (socket) => {
     console.log(`User ${userId} joined room`);
   });
 
+  // Join ride chat room
+  socket.on('join-ride-chat', (rideId) => {
+    socket.join(`ride-${rideId}`);
+    console.log(`Socket ${socket.id} joined ride chat: ${rideId}`);
+  });
+
+  // Leave ride chat room
+  socket.on('leave-ride-chat', (rideId) => {
+    socket.leave(`ride-${rideId}`);
+    console.log(`Socket ${socket.id} left ride chat: ${rideId}`);
+  });
+
+  // Handle new chat message
+  socket.on('send-message', async (data) => {
+    const { rideId, message, sender, senderRole } = data;
+    
+    // Broadcast to all users in the ride chat room
+    io.to(`ride-${rideId}`).emit('new-message', {
+      rideId,
+      message,
+      sender,
+      senderRole,
+      timestamp: new Date()
+    });
+  });
+
+  // Typing indicator
+  socket.on('typing', (data) => {
+    const { rideId, userId, isTyping } = data;
+    socket.to(`ride-${rideId}`).emit('user-typing', {
+      userId,
+      isTyping
+    });
+  });
+
+  // Message read receipt
+  socket.on('message-read', (data) => {
+    const { rideId, messageId, userId } = data;
+    socket.to(`ride-${rideId}`).emit('message-read-receipt', {
+      messageId,
+      userId,
+      readAt: new Date()
+    });
+  });
+
   // Driver location update
   socket.on('driver-location', (data) => {
-    socket.broadcast.emit('driver-location-update', data);
+    const { rideId, location } = data;
+    // Send to specific ride room
+    if (rideId) {
+      io.to(`ride-${rideId}`).emit('driver-location-update', data);
+    } else {
+      socket.broadcast.emit('driver-location-update', data);
+    }
   });
 
   // Ride status updates
   socket.on('ride-status', (data) => {
-    io.to(data.userId).emit('ride-status-update', data);
+    const { rideId, userId, status } = data;
+    // Notify both ride room and specific user
+    if (rideId) {
+      io.to(`ride-${rideId}`).emit('ride-status-update', data);
+    }
+    if (userId) {
+      io.to(userId).emit('ride-status-update', data);
+    }
   });
 
   socket.on('disconnect', () => {
