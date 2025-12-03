@@ -20,30 +20,42 @@ const Login = () => {
     };
 
     return (
-        <div className="container animate-fade-in" style={{ marginTop: '10vh' }}>
+        <div className="container container-sm animate-fade-in" style={{ marginTop: '15vh' }}>
             <div className="glass-card">
-                <h1>Welcome Back</h1>
-                {error && <div className="status-badge status-error" style={{ display: 'block', marginBottom: '1rem' }}>{error}</div>}
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                    <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem' }}>🚖</span>
+                    <h1>Welcome Back</h1>
+                    <p>Enter your credentials to access your account</p>
+                </div>
+
+                {error && <div className="status-badge status-error w-full mb-4" style={{ justifyContent: 'center' }}>{error}</div>}
+
                 <form onSubmit={handleSubmit}>
-                    <input
-                        type="email"
-                        placeholder="Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="password"
-                        placeholder="Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
-                    <button type="submit" style={{ width: '100%' }}>Login</button>
+                    <div className="mb-4">
+                        <input
+                            type="email"
+                            placeholder="Email Address"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="mb-4">
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <button type="submit" className="w-full" style={{ marginTop: '1rem' }}>Sign In</button>
                 </form>
-                <p style={{ marginTop: '1rem' }}>
-                    Don't have an account? <Link to="/register" style={{ color: 'var(--primary)' }}>Register</Link>
-                </p>
+
+                <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Don't have an account? </span>
+                    <Link to="/register" style={{ fontWeight: '600' }}>Create Account</Link>
+                </div>
             </div>
         </div>
     );

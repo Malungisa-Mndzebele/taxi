@@ -285,11 +285,7 @@ const acceptRideHandler = async (req, res) => {
     const isOnline = driverProfile.isOnline === true;
     if (!isOnline) {
       return res.status(400).json({
-        message: 'Driver must be online to accept rides',
-        debug: {
-          isOnline: driverProfile.isOnline,
-          driverStatus: driver.driverStatus
-        }
+        message: 'Driver must be online to accept rides'
       });
     }
 
@@ -297,11 +293,7 @@ const acceptRideHandler = async (req, res) => {
     const isAvailable = driverProfile.isAvailable === true;
     if (!isAvailable) {
       return res.status(400).json({
-        message: 'Driver is not available',
-        debug: {
-          isAvailable: driverProfile.isAvailable,
-          isOnline: driverProfile.isOnline
-        }
+        message: 'Driver is not available'
       });
     }
 

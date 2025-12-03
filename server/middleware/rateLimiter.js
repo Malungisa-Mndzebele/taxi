@@ -4,12 +4,12 @@ const rateLimit = require('express-rate-limit');
 // 5 requests per 15-minute window per IP address
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Maximum 5 requests per window
+  max: 5, // 5 requests per window
   message: {
     message: 'Too many requests, please try again later',
     code: 'RATE_LIMIT_EXCEEDED'
   },
-  standardHeaders: false, // Disable standard headers
+  standardHeaders: true, // Enable standard RateLimit-* headers
   legacyHeaders: true, // Enable X-RateLimit-* headers (required by spec)
   handler: (req, res) => {
     res.status(429).json({
@@ -19,7 +19,14 @@ const authLimiter = rateLimit({
   },
   skipSuccessfulRequests: false,
   skipFailedRequests: false,
-  skip: () => process.env.NODE_ENV === 'test' // Skip rate limiting in test environment
+  // In test environment, use a unique key per test to isolate rate limits
+  keyGenerator: (req) => {
+    if (process.env.NODE_ENV === 'test') {
+      // Use test ID header to isolate rate limits per test
+      return `test-${req.headers['x-test-id'] || Date.now()}`;
+    }
+    return req.ip;
+  }
 });
 
 module.exports = { authLimiter };

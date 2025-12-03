@@ -64,48 +64,23 @@ router.put('/status', [
         rating: 5.0,
         totalRides: 0
       };
-      driver.markModified('driverProfile');
-      await driver.save();
-      // Reload to get the saved state
-      driver = await User.findById(req.user.id);
     }
+    
+    // Build update data based on input format
+    const updateData = {};
     
     // Support both formats: { status: 'online' } or { isOnline: true, isAvailable: true }
     if (status !== undefined) {
       // Old format: { status: 'online' | 'offline' }
-      driver.driverStatus = status;
-      driver.driverProfile.isOnline = status === 'online';
-      driver.driverProfile.isAvailable = status === 'online';
-    } else {
-      // New format: { isOnline: true/false, isAvailable: true/false }
-      if (isOnline !== undefined) {
-        driver.driverProfile.isOnline = isOnline;
-        driver.driverStatus = isOnline ? 'online' : 'offline';
-        // If going offline, also set isAvailable to false
-        if (!isOnline) {
-          driver.driverProfile.isAvailable = false;
-        }
-      }
-      if (isAvailable !== undefined) {
-        driver.driverProfile.isAvailable = isAvailable;
-      }
-    }
-    
-    // Mark driverProfile as modified and save
-    driver.markModified('driverProfile');
-    await driver.save();
-    
-    // Always use $set to ensure the values are properly saved to the database
-    // This is more reliable than relying on markModified + save for nested objects
-    const updateData = {};
-    if (status !== undefined) {
       updateData.driverStatus = status;
       updateData['driverProfile.isOnline'] = status === 'online';
       updateData['driverProfile.isAvailable'] = status === 'online';
     } else {
+      // New format: { isOnline: true/false, isAvailable: true/false }
       if (isOnline !== undefined) {
         updateData['driverProfile.isOnline'] = isOnline;
         updateData.driverStatus = isOnline ? 'online' : 'offline';
+        // If going offline, also set isAvailable to false
         if (!isOnline) {
           updateData['driverProfile.isAvailable'] = false;
         }
@@ -116,15 +91,13 @@ router.put('/status', [
     }
     
     // Use $set to ensure nested object is properly saved
-    await User.findByIdAndUpdate(
+    const updatedDriver = await User.findByIdAndUpdate(
       req.user.id,
       { $set: updateData },
       { new: true }
     );
     
-    // Reload to get the final state
-    const finalDriver = await User.findById(req.user.id);
-    if (!finalDriver) {
+    if (!updatedDriver) {
       return res.status(404).json({ message: 'Driver not found' });
     }
 
@@ -132,12 +105,12 @@ router.put('/status', [
     if (status !== undefined) {
       // Old format: return status as string and driver object for backward compatibility
       res.json({ 
-        message: `Driver status updated successfully to ${finalDriver.driverStatus}`,
-        status: finalDriver.driverStatus,
+        message: `Driver status updated successfully to ${updatedDriver.driverStatus}`,
+        status: updatedDriver.driverStatus,
         driver: {
-          status: finalDriver.driverStatus,
-          isOnline: finalDriver.driverProfile?.isOnline || false,
-          isAvailable: finalDriver.driverProfile?.isAvailable || false
+          status: updatedDriver.driverStatus,
+          isOnline: updatedDriver.driverProfile?.isOnline || false,
+          isAvailable: updatedDriver.driverProfile?.isAvailable || false
         }
       });
     } else {
@@ -145,9 +118,9 @@ router.put('/status', [
       res.json({ 
         message: 'Driver status updated successfully',
         status: {
-          driverStatus: finalDriver.driverStatus,
-          isOnline: finalDriver.driverProfile?.isOnline || false,
-          isAvailable: finalDriver.driverProfile?.isAvailable || false
+          driverStatus: updatedDriver.driverStatus,
+          isOnline: updatedDriver.driverProfile?.isOnline || false,
+          isAvailable: updatedDriver.driverProfile?.isAvailable || false
         }
       });
     }

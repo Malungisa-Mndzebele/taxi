@@ -3,6 +3,11 @@ const { app } = require('../../test-server');
 const User = require('../../models/User');
 
 describe('Auth Routes', () => {
+  let testCounter = 0;
+  
+  beforeEach(() => {
+    testCounter++;
+  });
   describe('POST /api/auth/register', () => {
     it('should register a new passenger', async () => {
       const userData = {
@@ -720,6 +725,7 @@ describe('Auth Routes', () => {
 
   describe('Rate Limiting', () => {
     it('should enforce rate limit after 5 requests on login', async () => {
+      const testId = 'rate-limit-login-test';
       const loginData = {
         email: 'test@example.com',
         password: 'password123'
@@ -729,12 +735,14 @@ describe('Auth Routes', () => {
       for (let i = 0; i < 5; i++) {
         await request(app)
           .post('/api/auth/login')
+          .set('x-test-id', testId)
           .send(loginData);
       }
 
       // 6th request should be rate limited
       const response = await request(app)
         .post('/api/auth/login')
+        .set('x-test-id', testId)
         .send(loginData)
         .expect(429);
 
@@ -743,6 +751,7 @@ describe('Auth Routes', () => {
     });
 
     it('should include X-RateLimit-Limit header', async () => {
+      const testId = 'rate-limit-header-test';
       const loginData = {
         email: 'test@example.com',
         password: 'password123'
@@ -750,12 +759,14 @@ describe('Auth Routes', () => {
 
       const response = await request(app)
         .post('/api/auth/login')
+        .set('x-test-id', testId)
         .send(loginData);
 
       expect(response.headers['x-ratelimit-limit']).toBe('5');
     });
 
     it('should include X-RateLimit-Remaining header that decrements', async () => {
+      const testId = 'rate-limit-remaining-test';
       const loginData = {
         email: 'test@example.com',
         password: 'password123'
@@ -764,6 +775,7 @@ describe('Auth Routes', () => {
       // First request
       const response1 = await request(app)
         .post('/api/auth/login')
+        .set('x-test-id', testId)
         .send(loginData);
 
       expect(response1.headers['x-ratelimit-remaining']).toBeDefined();
@@ -772,6 +784,7 @@ describe('Auth Routes', () => {
       // Second request
       const response2 = await request(app)
         .post('/api/auth/login')
+        .set('x-test-id', testId)
         .send(loginData);
 
       const remaining2 = parseInt(response2.headers['x-ratelimit-remaining']);
@@ -785,6 +798,7 @@ describe('Auth Routes', () => {
     });
 
     it('should include X-RateLimit-Reset header', async () => {
+      const testId = 'rate-limit-reset-test';
       const loginData = {
         email: 'test@example.com',
         password: 'password123'
@@ -792,6 +806,7 @@ describe('Auth Routes', () => {
 
       const response = await request(app)
         .post('/api/auth/login')
+        .set('x-test-id', testId)
         .send(loginData);
 
       expect(response.headers['x-ratelimit-reset']).toBeDefined();
@@ -802,6 +817,7 @@ describe('Auth Routes', () => {
     });
 
     it('should return RATE_LIMIT_EXCEEDED error code when limit exceeded', async () => {
+      const testId = 'rate-limit-register-test';
       const registerData = {
         firstName: 'Test',
         lastName: 'User',
@@ -814,12 +830,14 @@ describe('Auth Routes', () => {
       for (let i = 0; i < 5; i++) {
         await request(app)
           .post('/api/auth/register')
+          .set('x-test-id', testId)
           .send({ ...registerData, email: `ratelimit${i}@example.com`, phone: `+123456789${i}` });
       }
 
       // 6th request should be rate limited
       const response = await request(app)
         .post('/api/auth/register')
+        .set('x-test-id', testId)
         .send({ ...registerData, email: 'ratelimit6@example.com', phone: '+1234567896' })
         .expect(429);
 
@@ -827,16 +845,20 @@ describe('Auth Routes', () => {
     });
 
     it('should apply rate limiting to forgot-password endpoint', async () => {
+      const testId = 'rate-limit-forgot-password-test';
+      
       // Make 5 requests
       for (let i = 0; i < 5; i++) {
         await request(app)
           .post('/api/auth/forgot-password')
+          .set('x-test-id', testId)
           .send({ email: 'test@example.com' });
       }
 
       // 6th request should be rate limited
       const response = await request(app)
         .post('/api/auth/forgot-password')
+        .set('x-test-id', testId)
         .send({ email: 'test@example.com' })
         .expect(429);
 

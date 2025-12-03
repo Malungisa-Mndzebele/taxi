@@ -9,7 +9,13 @@ import './index.css';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100vh' }}>
+        <div className="animate-spin" style={{ width: '3rem', height: '3rem', border: '4px solid var(--surface)', borderTopColor: 'var(--primary)', borderRadius: '50%' }}></div>
+      </div>
+    );
+  }
   return user ? children : <Navigate to="/login" />;
 };
 

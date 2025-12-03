@@ -55,47 +55,89 @@ const PassengerDashboard = () => {
     }, []);
 
     return (
-        <div className="container">
-            <div className="glass-card">
-                <h2>Request a Ride</h2>
-                {error && <div className="status-badge status-error" style={{ display: 'block', marginBottom: '1rem' }}>{error}</div>}
-                {success && <div className="status-badge status-success" style={{ display: 'block', marginBottom: '1rem' }}>{success}</div>}
+        <div className="container animate-fade-in">
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', alignItems: 'start' }}>
 
-                <form onSubmit={requestRide}>
-                    <input
-                        placeholder="Pickup Location"
-                        value={pickup}
-                        onChange={(e) => setPickup(e.target.value)}
-                        required
-                    />
-                    <input
-                        placeholder="Dropoff Location"
-                        value={dropoff}
-                        onChange={(e) => setDropoff(e.target.value)}
-                        required
-                    />
-                    <button type="submit" disabled={loading} style={{ width: '100%' }}>
-                        {loading ? 'Requesting...' : 'Request Ride'}
-                    </button>
-                </form>
-            </div>
-
-            <div className="glass-card">
-                <h3>Your Active Rides</h3>
-                {activeRides.length === 0 ? (
-                    <p>No active rides.</p>
-                ) : (
-                    <div className="grid" style={{ marginTop: '1rem' }}>
-                        {activeRides.map((ride) => (
-                            <div key={ride._id} className="ride-item" style={{ border: '1px solid var(--glass-border)', borderRadius: '0.5rem', padding: '1rem' }}>
-                                <p><strong>From:</strong> {ride.pickupLocation?.address}</p>
-                                <p><strong>To:</strong> {ride.dropoffLocation?.address}</p>
-                                <p><strong>Status:</strong> <span className="status-badge status-success">{ride.status}</span></p>
-                                <p><strong>Driver:</strong> {ride.driver ? `${ride.driver.firstName} ${ride.driver.lastName}` : 'Finding driver...'}</p>
-                            </div>
-                        ))}
+                {/* Request Ride Section */}
+                <div className="glass-card">
+                    <div className="mb-4">
+                        <h2>Request a Ride</h2>
+                        <p>Where do you want to go today?</p>
                     </div>
-                )}
+
+                    {error && <div className="status-badge status-error w-full mb-4">{error}</div>}
+                    {success && <div className="status-badge status-success w-full mb-4">{success}</div>}
+
+                    <form onSubmit={requestRide}>
+                        <div className="mb-4">
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>Pickup Location</label>
+                            <input
+                                placeholder="e.g. 123 Main St"
+                                value={pickup}
+                                onChange={(e) => setPickup(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="mb-4">
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '500' }}>Destination</label>
+                            <input
+                                placeholder="e.g. Central Park"
+                                value={dropoff}
+                                onChange={(e) => setDropoff(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <button type="submit" disabled={loading} className="w-full" style={{ padding: '1rem' }}>
+                            {loading ? 'Finding Drivers...' : 'Request Ride Now'}
+                        </button>
+                    </form>
+                </div>
+
+                {/* Active Rides Section */}
+                <div>
+                    <h3 className="mb-4">Your Active Rides</h3>
+                    {activeRides.length === 0 ? (
+                        <div className="glass-card" style={{ textAlign: 'center', padding: '3rem', borderStyle: 'dashed' }}>
+                            <p>No active rides currently.</p>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col gap-4">
+                            {activeRides.map((ride) => (
+                                <div key={ride._id} className="glass-card" style={{ padding: '1.5rem' }}>
+                                    <div className="flex justify-between items-center mb-4">
+                                        <span className="status-badge status-success">{ride.status}</span>
+                                        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>#{ride._id.slice(-6)}</span>
+                                    </div>
+
+                                    <div className="mb-4" style={{ position: 'relative', paddingLeft: '1.5rem', borderLeft: '2px solid var(--glass-border)' }}>
+                                        <div style={{ marginBottom: '1rem' }}>
+                                            <div style={{ width: '10px', height: '10px', background: 'var(--primary)', borderRadius: '50%', position: 'absolute', left: '-6px', top: '5px' }}></div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>From</div>
+                                            <div>{ride.pickupLocation?.address}</div>
+                                        </div>
+                                        <div>
+                                            <div style={{ width: '10px', height: '10px', background: 'var(--accent)', borderRadius: '50%', position: 'absolute', left: '-6px', top: 'auto', bottom: '5px' }}></div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>To</div>
+                                            <div>{ride.dropoffLocation?.address}</div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                        <div style={{ width: '40px', height: '40px', background: 'var(--surface)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem' }}>
+                                            👤
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Driver</div>
+                                            <div style={{ fontWeight: '600' }}>
+                                                {ride.driver ? `${ride.driver.firstName} ${ride.driver.lastName}` : 'Finding driver...'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

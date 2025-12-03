@@ -65,16 +65,11 @@ describe('Ride Flow Integration Tests', () => {
 
   describe('Complete Ride Flow', () => {
     it('should complete a full ride from request to completion', async () => {
-      // Ensure driver is online and available before starting
-      driver.driverProfile.isOnline = true;
-      driver.driverProfile.isAvailable = true;
-      await driver.save();
-
-      // Also set driver online via API to ensure consistency
+      // Set driver online via API to ensure proper initialization
       await request(app)
         .put('/api/drivers/status')
         .set('Authorization', `Bearer ${driverToken}`)
-        .send({ status: 'online' })
+        .send({ isOnline: true, isAvailable: true })
         .expect(200);
 
       // Step 1: Passenger requests a ride
@@ -98,7 +93,7 @@ describe('Ride Flow Integration Tests', () => {
         .send(rideRequestData)
         .expect(201);
 
-      const rideId = requestResponse.body.ride._id;
+      const rideId = requestResponse.body.ride._id || requestResponse.body.ride.id;
       expect(requestResponse.body.ride.status).toBe('requested');
 
       // Step 2: Driver accepts the ride
@@ -108,7 +103,8 @@ describe('Ride Flow Integration Tests', () => {
         .expect(200);
 
       expect(acceptResponse.body.ride.status).toBe('accepted');
-      expect(acceptResponse.body.ride.driver.toString()).toBe(driver._id.toString());
+      const driverId = acceptResponse.body.ride.driver._id || acceptResponse.body.ride.driver;
+      expect(driverId.toString()).toBe(driver._id.toString());
 
       // Verify driver is no longer available
       const updatedDriver = await User.findById(driver._id);
@@ -149,16 +145,11 @@ describe('Ride Flow Integration Tests', () => {
     });
 
     it('should handle ride cancellation flow', async () => {
-      // Ensure driver is online and available
-      driver.driverProfile.isOnline = true;
-      driver.driverProfile.isAvailable = true;
-      await driver.save();
-
-      // Also set driver online via API to ensure consistency
+      // Set driver online via API to ensure proper initialization
       await request(app)
         .put('/api/drivers/status')
         .set('Authorization', `Bearer ${driverToken}`)
-        .send({ status: 'online' })
+        .send({ isOnline: true, isAvailable: true })
         .expect(200);
 
       // Step 1: Passenger requests a ride
@@ -182,7 +173,7 @@ describe('Ride Flow Integration Tests', () => {
         .send(rideRequestData)
         .expect(201);
 
-      const rideId = requestResponse.body.ride._id;
+      const rideId = requestResponse.body.ride._id || requestResponse.body.ride.id;
 
       // Step 2: Driver accepts the ride
       await request(app)
@@ -206,16 +197,11 @@ describe('Ride Flow Integration Tests', () => {
     });
 
     it('should handle driver cancellation flow', async () => {
-      // Ensure driver is online and available
-      driver.driverProfile.isOnline = true;
-      driver.driverProfile.isAvailable = true;
-      await driver.save();
-
-      // Also set driver online via API to ensure consistency
+      // Set driver online via API to ensure proper initialization
       await request(app)
         .put('/api/drivers/status')
         .set('Authorization', `Bearer ${driverToken}`)
-        .send({ status: 'online' })
+        .send({ isOnline: true, isAvailable: true })
         .expect(200);
 
       // Step 1: Passenger requests a ride
@@ -239,7 +225,7 @@ describe('Ride Flow Integration Tests', () => {
         .send(rideRequestData)
         .expect(201);
 
-      const rideId = requestResponse.body.ride._id;
+      const rideId = requestResponse.body.ride._id || requestResponse.body.ride.id;
 
       // Step 2: Driver accepts the ride
       await request(app)
