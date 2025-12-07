@@ -143,7 +143,7 @@ app.use(errorHandler);
 const server = http.createServer(app);
 
 // MongoDB Docker Service Connection
-const MONGODB_URI = 'mongodb://root:example@mongodb:27017/taxi?authSource=admin';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://root:example@mongodb:27017/taxi?authSource=admin';
 
 // Disable buffering to ensure we don't try to use MongoDB without a connection
 mongoose.set('bufferCommands', false);
