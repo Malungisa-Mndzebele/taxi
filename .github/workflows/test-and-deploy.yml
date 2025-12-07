@@ -115,11 +115,17 @@ jobs:
   deploy-backend:
     name: Deploy Backend to Fly.io
     runs-on: ubuntu-latest
-    needs: [build-check]
+    needs: [build-check, build-frontend]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Download frontend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: web/dist
       
       - name: Setup Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
