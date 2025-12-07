@@ -20,20 +20,15 @@ Click **New repository secret** and add each of these:
 
 #### FTP_SERVER
 - **Name**: `FTP_SERVER`
-- **Value**: Your FTP server hostname or IP address
-  - Example: `khasinogaming.com`
-  - Or: `ftp.khasinogaming.com`
-  - Or: `123.45.67.89`
+- **Value**: `server28.shared.spaceship.host`
 
 #### FTP_USERNAME
 - **Name**: `FTP_USERNAME`
-- **Value**: Your FTP username
-  - Example: `mawdqtvped`
-  - This is usually the same as your cPanel username
+- **Value**: `app@khasinogaming.com`
 
 #### FTP_PASSWORD
 - **Name**: `FTP_PASSWORD`
-- **Value**: Your FTP password
+- **Value**: (Your Password: `@...`)
   - ⚠️ **IMPORTANT**: This is a secret - never commit it to code!
   - Use a strong password
   - You can find/reset this in your hosting control panel (cPanel, Plesk, etc.)

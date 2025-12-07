@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/app/', // Base path for deployment to khasinogaming.com/app/
   server: {
     proxy: {
       '/api': {
