@@ -38,9 +38,10 @@ const apiLimiter = rateLimit({
 });
 
 // CORS configuration
+const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:19006', 'http://localhost:8080', 'https://khasinogaming.com'];
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
-  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:19006', 'http://localhost:8080'];
+  ? [...process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()), ...defaultOrigins]
+  : defaultOrigins;
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -141,24 +142,34 @@ app.use(errorHandler);
 // Create HTTP server
 const server = http.createServer(app);
 
-// MongoDB connection (optional - will work without it for testing)
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/taxi-app';
+// MongoDB Docker Service Connection
+const MONGODB_URI = 'mongodb://root:example@mongodb:27017/taxi?authSource=admin';
 
-if (process.env.MONGODB_URI || process.env.NODE_ENV === 'production') {
-  mongoose.connect(MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  })
-    .then(() => {
-      console.log('✅ MongoDB connected successfully');
-    })
-    .catch((err) => {
-      console.log('⚠️  MongoDB connection failed:', err.message);
-      console.log('📝 Server will run without database (API endpoints may have limited functionality)');
+// Disable buffering to ensure we don't try to use MongoDB without a connection
+mongoose.set('bufferCommands', false);
+mongoose.set('strictQuery', true);
+
+const connectToMongoDB = async () => {
+  try {
+    console.log('🔌 Attempting to connect to MongoDB...');
+    await mongoose.connect(MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // 5 seconds timeout for server selection
+      socketTimeoutMS: 45000, // 45 seconds socket timeout
+      connectTimeoutMS: 10000, // 10 seconds connection timeout
     });
-} else {
-  console.log('📝 Running without MongoDB (set MONGODB_URI in .env to enable database)');
-}
+    console.log('✅ Successfully connected to MongoDB in Docker');
+  } catch (error) {
+    console.error('❌ Failed to connect to MongoDB:', error.message);
+    console.error('  - Please ensure the MongoDB Docker container is running');
+    console.error('  - Check Docker Compose logs with: docker-compose logs mongodb');
+    process.exit(1); // Exit with error to prevent app from running without DB
+  }
+};
+
+// Start MongoDB connection
+connectToMongoDB();
 
 // Socket.io setup for real-time features
 const socketIO = require('socket.io');
@@ -194,7 +205,7 @@ io.on('connection', (socket) => {
   // Handle new chat message
   socket.on('send-message', async (data) => {
     const { rideId, message, sender, senderRole } = data;
-    
+
     // Broadcast to all users in the ride chat room
     io.to(`ride-${rideId}`).emit('new-message', {
       rideId,
