@@ -53,7 +53,9 @@ jobs:
       - name: Build frontend
         working-directory: ./web
         run: npm run build
-      
+        env:
+          VITE_API_URL: ${{ github.ref == 'refs/heads/main' && 'https://taxi-app.fly.dev/api' || 'https://taxi-app-staging.fly.dev/api' }}
+
       - name: Upload frontend build artifacts
         uses: actions/upload-artifact@v4
         with:
