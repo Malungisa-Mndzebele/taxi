@@ -32,15 +32,50 @@ jobs:
         working-directory: ./server
         run: node -c index.js
 
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+      
+      - name: Install frontend dependencies
+        working-directory: ./web
+        run: npm ci
+      
+      - name: Build frontend
+        working-directory: ./web
+        run: npm run build
+      
+      - name: Upload frontend build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: web/dist
+          retention-days: 7
+
   deploy-staging:
     name: Deploy to Fly.io Staging
     runs-on: ubuntu-latest
-    needs: [build-check]
+    needs: [build-check, build-frontend]
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Download frontend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: web/dist
       
       - name: Setup Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
@@ -67,12 +102,18 @@ jobs:
   deploy-production:
     name: Deploy to Fly.io Production
     runs-on: ubuntu-latest
-    needs: [build-check]
+    needs: [build-check, build-frontend]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Download frontend build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: web/dist
       
       - name: Setup Fly.io CLI
         uses: superfly/flyctl-actions/setup-flyctl@master

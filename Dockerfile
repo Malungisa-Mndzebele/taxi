@@ -1,12 +1,5 @@
 FROM node:18-alpine AS builder
 
-# Build Frontend
-WORKDIR /app/web
-COPY web/package*.json ./
-RUN npm ci
-COPY web/ .
-RUN npm run build
-
 # Setup Backend
 WORKDIR /app/server
 COPY server/package*.json ./
@@ -20,8 +13,8 @@ WORKDIR /app
 COPY --from=builder /app/server/node_modules ./server/node_modules
 COPY server/ ./server/
 
-# Copy frontend build
-COPY --from=builder /app/web/dist ./web/dist
+# Copy frontend build (pre-built from CI)
+COPY web/dist ./web/dist
 
 # Environment
 ENV NODE_ENV=production
@@ -37,3 +30,4 @@ USER nodejs
 EXPOSE 8080
 
 CMD ["node", "server/index.js"]
+
