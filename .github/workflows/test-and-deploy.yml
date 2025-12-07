@@ -74,15 +74,14 @@ jobs:
           name: frontend-dist
           path: dist
       
-      - name: Deploy to Server via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+      - name: Deploy to Server via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          username: ${{ secrets.SFTP_USERNAME }}
-          server: ${{ secrets.SFTP_SERVER }}
-          ssh_private_key: ${{ secrets.SFTP_SSH_KEY }}
-          local_path: './dist/*'
-          remote_path: '/home/mawdqtvped/khasinogaming.com/app-staging'
-          sftp_only: true
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: /home/mawdqtvped/khasinogaming.com/app-staging/
 
   deploy-production:
     name: Deploy Frontend to Production Server
@@ -97,15 +96,14 @@ jobs:
           name: frontend-dist
           path: dist
       
-      - name: Deploy to Server via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+      - name: Deploy to Server via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          username: ${{ secrets.SFTP_USERNAME }}
-          server: ${{ secrets.SFTP_SERVER }}
-          ssh_private_key: ${{ secrets.SFTP_SSH_KEY }}
-          local_path: './dist/*'
-          remote_path: '/home/mawdqtvped/khasinogaming.com/app'
-          sftp_only: true
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: /home/mawdqtvped/khasinogaming.com/app/
       
       - name: Verify deployment
         run: |
