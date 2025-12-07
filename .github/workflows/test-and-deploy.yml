@@ -81,7 +81,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          server-dir: /home/mawdqtvped/khasinogaming.com/app-staging/
+          server-dir: ./staging/ # Deploy to subdirectory since user is rooted
 
   deploy-production:
     name: Deploy Frontend to Production Server
@@ -103,7 +103,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./dist/
-          server-dir: /home/mawdqtvped/khasinogaming.com/app/
+          server-dir: ./ # FTP user is already rooted to /app/ folder
       
       - name: Verify deployment
         run: |
